@@ -1,5 +1,9 @@
 # Automata: generative music sequencing language
 
+## next step
+
+- make a c++ constexpr prototype library
+
 ## design goals
 
 - functional programming philosophy
