@@ -10,3 +10,6 @@
 [submodule "external/Orca"]
 	path = external/Orca
 	url = https://github.com/hundredrabbits/Orca
+[submodule "external/cane"]
+	path = external/cane
+	url = https://github.com/xiashj24/cane
