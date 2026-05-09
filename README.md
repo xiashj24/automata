@@ -33,6 +33,12 @@
     - sub rhythms?
 - generate modulation signal from rhythm using deterministic systems like cellular automata and Music Thing Modular Turing Machines
 - lazy evaluation (what does it even mean?)
+- support microtuning, frequency manipulation in hz
+- integration with [hydra](https://hydra.ojack.xyz/)?
+
+- Claude MCP server is a must!
+    - but you need to figure out how to make agents receive audio feedback
+
 
 ## dependencies
 
@@ -53,6 +59,7 @@
 - aethetic of aliasing
 - 作って動かすALife
     - emergence, boid
+- read about literature on algorithmic composition by computer music research people
 
 ## related projects 
 
@@ -60,10 +67,24 @@
 - tidal cycles and [strudel](https://strudel.cc/)
 - ORCA
 - isobar and signalflow
+- [Reactable](https://reactable.com/)
 - Faust
 - Bespoke Synth
 - Sugar Bytes Nest
 - games of Zachtronics
+- a whole bunch of similar algorave projects (dang! people have thought about this before...)
+    - https://github.com/tarpit-collective/cane
+    - https://github.com/pd3v/line
+    - https://xn--melrse-egb.org/
+    - https://machiaworx.net/recode/doku.php?id=start
+    - https://github.com/irritant/serialist (inactive)
+    - https://tweakable.org/examples
+    - https://github.com/echolevel/wulfcode
+    - https://github.com/sdclibbery/limut
+    - https://github.com/Mdashdotdashn/krill
+    - https://github.com/nnirror/facet
+    - https://github.com/lucretiomsp/Coypu
+
 
 ## modular synths
 
