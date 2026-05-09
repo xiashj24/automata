@@ -1,0 +1,12 @@
+[submodule "external/sapf"]
+	path = external/sapf
+	url = https://github.com/lfnoise/sapf
+[submodule "external/isobar"]
+	path = external/isobar
+	url = https://github.com/ideoforms/isobar
+[submodule "external/strudel"]
+	path = external/strudel
+	url = https://codeberg.org/uzu/strudel
+[submodule "external/Orca"]
+	path = external/Orca
+	url = https://github.com/hundredrabbits/Orca
