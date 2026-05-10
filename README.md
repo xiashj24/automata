@@ -67,6 +67,8 @@
 - tidal cycles and [strudel](https://strudel.cc/)
 - ORCA
 - isobar and signalflow
+- [Klang](https://github.com/nashaudio/klang)
+    - the idea of using c++ to express signal flow is interesting
 - [Reactable](https://reactable.com/)
 - Faust
 - Bespoke Synth

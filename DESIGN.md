@@ -40,6 +40,7 @@ remember, the syntax need to be LLM friendly, and constexpr everything
 # signal input
 
 - x and y reserved, z for touch pressure
+- i reserved for step index
 
 # signal manipulation
 
