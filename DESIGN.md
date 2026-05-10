@@ -52,10 +52,10 @@ remember, the syntax need to be LLM friendly, and constexpr everything
 
 - dac(beat) -> uint8_t
 
-# routing, selecting
+# randomness
 
-- bernoulli
-- mux, demux
+- bernoulli gate
+- velvet noise
 
 # arppegiator
 

@@ -49,6 +49,17 @@
 - [Starting Forth](https://www.forth.com/wp-content/uploads/2018/01/Starting-FORTH.pdf)
 - [Crafting Interpreters](https://craftinginterpreters.com/)
     - ch 1-3, 14
+- MAKE: electronic music from scratch
+    - to learn about logic ICs
+
+## [logic ICs](https://en.wikipedia.org/wiki/List_of_4000-series_integrated_circuits)
+
+- mux, demux
+- counter?
+- schmidt trigger
+- PLL
+- Bonus: figure out how the WASP filter does integration using CMOS logic
+    - the language should be good enough for acid filters, because why not?
 
 ## academic studies
 
