@@ -1,14 +1,14 @@
 # rhythem generators
 
-a beat is a rhythm, represented by an array of bits
-- variable length?
-- is it a vector<bool> or bitset?
+a rhythm is represented by a bitset
 
 in functional programming, the states are "visible" from the outside, so you can manipulate and combine the states and use them to generate visualizations trivially.
 
-remember, the syntax need to be AI friendly, for AI improvisation
+remember, the syntax need to be LLM friendly, and constexpr everything
 
-- clock: divide from raw ticks to dicrete steps 
+- clock: divide from raw ticks to dicrete steps
+    - use c++ high resolution timer
+    - midi clock sync
 
 - euclid
 
@@ -30,7 +30,6 @@ remember, the syntax need to be AI friendly, for AI improvisation
     - insert one sample delay automatically
 
 - min and max
-
 
 # rhythm manipulation
 
