@@ -1,0 +1,78 @@
+---
+Checks: "*,
+        -abseil-*,
+        -altera-*,
+        -android-*,
+        -boost-*,
+        -fuchsia-*,
+        -google-*,
+        -llvm*,
+        -zircon-*,
+        -modernize-use-trailing-return-type,
+        -modernize-use-std-print,
+        -modernize-use-auto,
+        -modernize-loop-convert,
+        -modernize-avoid-c-arrays,
+        -modernize-use-ranges,
+        -readability-else-after-return,
+        -readability-magic-numbers,
+        -readability-uppercase-literal-suffix,
+        -readability-function-cognitive-complexity,
+        -readability-isolate-declaration,
+        -cppcoreguidelines-non-private-member-variables-in-classes,
+        -cppcoreguidelines-avoid-magic-numbers,
+        -cppcoreguidelines-avoid-non-const-global-variables,
+        -cppcoreguidelines-avoid-c-arrays,
+        -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+        -cppcoreguidelines-pro-bounds-constant-array-index,
+        -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+        -cppcoreguidelines-pro-type-vararg,
+        -cppcoreguidelines-owning-memory,
+        -hicpp-avoid-c-arrays,
+        -hicpp-no-array-decay,
+        -hicpp-use-auto,
+        -hicpp-uppercase-literal-suffix,
+        -hicpp-vararg,
+        -misc-non-private-member-variables-in-classes,
+        -misc-use-anonymous-namespace,
+        -misc-use-internal-linkage,
+        -misc-const-correctness,
+        -bugprone-easily-swappable-parameters,
+        -hicpp-signed-bitwise,
+        -readability-braces-around-statements,
+        -hicpp-braces-around-statements,
+        -google-readability-braces-around-statements,
+        -clang-analyzer-optin.core.EnumCastOutOfRange,
+        -cppcoreguidelines-pro-type-reinterpret-cast,
+        -cppcoreguidelines-pro-type-member-init,
+        -hicpp-member-init,
+        -portability-avoid-pragma-once,
+        -readability-math-missing-parentheses,
+        -cppcoreguidelines-special-member-functions,
+        -hicpp-explicit-conversions,
+        -hicpp-special-member-functions,
+        -bugprone-exception-escape,
+        -bugprone-throwing-static-initialization,
+        -cert-err58-cpp,
+        -misc-no-recursion,
+        -performance-inefficient-vector-operation,
+        -bugprone-unchecked-optional-access
+"
+WarningsAsErrors: ''
+HeaderFilterRegex: 'include/.*'
+FormatStyle:     none
+
+CheckOptions:
+  - key: readability-identifier-length.IgnoredVariableNames
+    value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|in|it|id|fs|dt|ok|sp|up|nn|ec|cc|io|sv|dl|r1|r2|p0|p1|p2|s1|s2|m1|m2|fn|fc|hz|db|ms|ch'
+  - key: readability-identifier-length.IgnoredParameterNames
+    value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|in|id|fs|dt|fn|fc|sp|up|ch'
+  - key: readability-identifier-length.IgnoredLoopCounterNames
+    value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|k|r|ii|jj|kk'
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: '2'
+  - key: readability-identifier-length.MinimumParameterNameLength
+    value: '2'
+  - key: readability-identifier-length.MinimumLoopCounterNameLength
+    value: '2'

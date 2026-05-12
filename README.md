@@ -1,8 +1,6 @@
 # Automata: generative music sequencing language
 
-## next step
-
-- make a c++ constexpr prototype library
+A minimal, RPN-based, feedback-capable interpreted music language, designed for LLM, human live coding, web sharing, and embedded hardware — with cellular automata as first-class primitives.
 
 ## design goals
 

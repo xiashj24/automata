@@ -1,0 +1,20 @@
+# OS generated files
+.DS_Store
+
+# build artifact
+build
+
+# imgui
+imgui.ini
+
+# cpm
+.cpm-cache
+
+# coverage
+*.gcov
+coverage.info
+Testing
+
+# preset
+*.json
+!.claude/settings.json
