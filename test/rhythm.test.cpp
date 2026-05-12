@@ -159,7 +159,6 @@ TEST_CASE("dac", "[rhythm]") {
   constexpr Rhythm<4> beat("x.x.");
   constexpr auto val = beat.dac<4>();
   STATIC_REQUIRE(val == 0b0101);
-  constexpr Rhythm<8> beat("x.x.");
 }
 
 // TEST_CASE("interleave", "[rhythm]") {
