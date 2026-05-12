@@ -14,15 +14,17 @@ remember, the syntax need to be LLM friendly, and constexpr everything
 
 # operators
 
-- = (assignment)
+- = (conversion) (done)
 
-- boolean logic
+- boolean logic (done)
     - * (and)
     - + (or)
     - ! (not, invert)
     - - (subtract)
 
 - % (modulo)
+
+- comparator
 
 - @/d/z (delay)
 
@@ -42,15 +44,11 @@ remember, the syntax need to be LLM friendly, and constexpr everything
 - x and y reserved, z for touch pressure
 - i reserved for step index
 
-# signal manipulation
+# rhythm <-> signal conversion
 
-- bitcrush: >>, <<
+- adc: signal to beat
 
-# rhythm -> signal conversion
-
-- adc(signal) -> beat
-
-- dac(beat) -> uint8_t
+- dac: beat to signal
 
 # randomness
 
@@ -59,7 +57,6 @@ remember, the syntax need to be LLM friendly, and constexpr everything
 
 # arppegiator
 
-arp([0, 3, 5, 9], up_down)
 
 # comments
 

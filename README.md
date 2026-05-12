@@ -25,14 +25,14 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 ## features
 
 - rhythm visualization
-- push the tick rate to audio rate for 8 bit sound generation
+- push the tick rate to audio rate for sound generation
 - web assembly build via emscripten
 - x and y input as data source, normalized to mouse X and Y position on desktop
 - how to handle timing offset and velocity? groove?
     - sub rhythms?
 - generate modulation signal from rhythm using deterministic systems like cellular automata and Music Thing Modular Turing Machines
 - lazy evaluation (what does it even mean?)
-- support microtuning, frequency manipulation in hz
+- microtuning, frequency manipulation in hz
 - integration with [hydra](https://hydra.ojack.xyz/)?
 
 - Claude MCP server is a must!
@@ -54,7 +54,7 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 ## [logic ICs](https://en.wikipedia.org/wiki/List_of_4000-series_integrated_circuits)
 
 - mux, demux
-- counter?
+- counter
 - schmidt trigger
 - PLL
 - Bonus: figure out how the WASP filter does integration using CMOS logic
@@ -73,10 +73,12 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 - [Bret Victor: Inventing on Principle](https://www.youtube.com/watch?v=PUv66718DII)
     - https://thebookofshaders.com/edit.php
     - shadertoy
+- number theory and pseudo-random number generators
+- [Algorithmic Pattern project](https://algorithmicpattern.org/) by Alex Mclean
 
 ## related projects 
 
-- [sapf: Sound As Pure Form](https://github.com/lfnoise/sapf)
+- [sapf: Sound As Pure Form](https://github.com/lfnoise/sapf) and SuperCollider
 - tidal cycles and [strudel](https://strudel.cc/)
 - ORCA
 - isobar and signalflow

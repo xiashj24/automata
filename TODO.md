@@ -1,2 +1,1 @@
 - make a c++ constexpr prototype library
-    - set up Catch2 test environment

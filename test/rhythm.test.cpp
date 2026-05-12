@@ -1,5 +1,4 @@
 #include <cstddef>
-// #include <algorithm>
 
 #include <rhythm.hpp>
 #include <math.hpp>
@@ -7,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 using automata::lcm;
+using automata::next_permutation;
 using automata::Rhythm;
 // using automata::interleave;
 
@@ -172,4 +172,55 @@ TEST_CASE("dac", "[rhythm]") {
 //   REQUIRE_FALSE(zipped[2]);
 //   REQUIRE(zipped[3]);
 // }
+
+TEST_CASE("next_permutation 2-step cycle", "[rhythm][next_permutation]") {
+  // "x." is the last permutation; wraps to ".x" (first, ascending order)
+  constexpr Rhythm<2> hit_first{"x."};
+  STATIC_REQUIRE(next_permutation(hit_first) == Rhythm<2>{".x"});
+
+  // ".x" advances to "x."
+  constexpr Rhythm<2> rest_first{".x"};
+  STATIC_REQUIRE(next_permutation(rest_first) == Rhythm<2>{"x."});
+}
+
+TEST_CASE("next_permutation 3-step full cycle with 1 hit", "[rhythm][next_permutation]") {
+  // C(3,1) = 3 permutations: "..x" -> ".x." -> "x.." -> "..x"
+  constexpr Rhythm<3> first{"..x"};
+  constexpr auto second = next_permutation(first);
+  STATIC_REQUIRE(second == Rhythm<3>{".x."});
+  constexpr auto third = next_permutation(second);
+  STATIC_REQUIRE(third == Rhythm<3>{"x.."});
+  constexpr auto wrapped = next_permutation(third);
+  STATIC_REQUIRE(wrapped == first);
+}
+
+TEST_CASE("next_permutation 4-step count with 2 hits equals C(4,2)=6", "[rhythm][next_permutation]") {
+  constexpr Rhythm<4> first{"..xx"};
+  constexpr auto p1 = next_permutation(first);
+  constexpr auto p2 = next_permutation(p1);
+  constexpr auto p3 = next_permutation(p2);
+  constexpr auto p4 = next_permutation(p3);
+  constexpr auto p5 = next_permutation(p4);
+  constexpr auto wrapped = next_permutation(p5);
+  STATIC_REQUIRE(wrapped == first);
+  STATIC_REQUIRE_FALSE(p1 == first);
+  STATIC_REQUIRE_FALSE(p2 == first);
+  STATIC_REQUIRE_FALSE(p3 == first);
+  STATIC_REQUIRE_FALSE(p4 == first);
+  STATIC_REQUIRE_FALSE(p5 == first);
+}
+
+TEST_CASE("next_permutation of all-hits or no-hits returns itself", "[rhythm][next_permutation]") {
+  constexpr Rhythm<3> all_hits{"xxx"};
+  STATIC_REQUIRE(next_permutation(all_hits) == all_hits);
+
+  constexpr Rhythm<3> no_hits{"..."};
+  STATIC_REQUIRE(next_permutation(no_hits) == no_hits);
+}
+
+TEST_CASE("next_permutation preserves hit count", "[rhythm][next_permutation]") {
+  constexpr Rhythm<4> original{"x.x."};
+  constexpr auto permuted = next_permutation(original);
+  STATIC_REQUIRE(original.hits() == permuted.hits());
+}
 

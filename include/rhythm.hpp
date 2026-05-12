@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <array>
 #include <bitset>
 #include <cstdint>
 #include <cstddef>
@@ -52,6 +54,12 @@ public:
   // do you really need this? should you use modulo here?
   constexpr void set(std::size_t i, bool v = true) noexcept { bits.set(i, v); }
   [[nodiscard]] constexpr std::size_t length() const noexcept { return N; }
+  [[nodiscard]] constexpr std::size_t hits() const noexcept {
+    return bits.count();
+  }
+  [[nodiscard]] constexpr std::size_t rests() const noexcept {
+    return N - bits.count();
+  }
   [[nodiscard]] constexpr bool none() const noexcept { return bits.none(); }
 
   template <std::size_t Target>
@@ -194,6 +202,22 @@ template <std::size_t N, std::size_t... Ms>
   };
   write(first);
   (write(rest), ...);
+  return result;
+}
+
+// next_permutation: advance to the next lexicographic arrangement of steps.
+// Same number of hits. Wraps to first permutation (rests before hits) after
+// last.
+template <std::size_t N>
+[[nodiscard]] constexpr Rhythm<N> next_permutation(
+    const Rhythm<N>& rhythm) noexcept {
+  std::array<bool, N> steps{};
+  for (std::size_t i = 0; i < N; ++i)
+    steps[i] = rhythm[i];
+  std::ranges::next_permutation(steps);
+  Rhythm<N> result;
+  for (std::size_t i = 0; i < N; ++i)
+    result.set(i, steps[i]);
   return result;
 }
 

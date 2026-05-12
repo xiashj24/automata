@@ -15,3 +15,5 @@ Always follow the `/tdd` skill guidelines when writing or reviewing tests and pr
 
 - don't use single short variable names unless it's conventional, e.g. x, y, z
     - don't use rhy as shorthand for Rhythm, use more descriptive names
+
+- constexpr whenever possible
