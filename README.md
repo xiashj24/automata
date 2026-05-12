@@ -19,6 +19,7 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
     - 8 bit ADC and DAC
 - get chaos-like behavior via feedback patching
 - discrete timing model: ticks->steps->trigger
+- immediate visual feedback (Bret Victor, shadertoy)
 - visual generator as first class citizen
 
 ## features
@@ -69,6 +70,9 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 - 作って動かすALife
     - emergence, boid
 - read about literature on algorithmic composition by computer music research people
+- [Bret Victor: Inventing on Principle](https://www.youtube.com/watch?v=PUv66718DII)
+    - https://thebookofshaders.com/edit.php
+    - shadertoy
 
 ## related projects 
 
