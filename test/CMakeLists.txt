@@ -1,6 +1,6 @@
 enable_testing()
 
-add_executable(unit_tests rhythm.test.cpp)
+add_executable(unit_tests rhythm.test.cpp math.test.cpp)
 
 target_compile_features(unit_tests PRIVATE cxx_std_${CMAKE_CXX_STANDARD})
 
