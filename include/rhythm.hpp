@@ -173,9 +173,9 @@ template <std::size_t N, std::size_t M>
   return lhs.template tile<len>() - rhs.template tile<len>();
 }
 
-// concatenation: Rhythm<N> + Rhythm<M> -> Rhythm<N+M>
+// concatenation: cat(Rhythm<N>, Rhythm<M>) -> Rhythm<N+M>
 template <std::size_t N, std::size_t M>
-[[nodiscard]] constexpr Rhythm<N + M> operator+(const Rhythm<N>& lhs,
+[[nodiscard]] constexpr Rhythm<N + M> cat(const Rhythm<N>& lhs,
                                                 const Rhythm<M>& rhs) noexcept {
   Rhythm<N + M> result;
   for (std::size_t i = 0; i < N; ++i)

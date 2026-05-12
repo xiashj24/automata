@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang++",
+            "cppStandard": "c++23",
+            "compileCommands": "${workspaceFolder}/build/develop/compile_commands.json"
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "C:/Users/xiash/scoop/apps/llvm/current/bin/clang++.exe",
+            "cppStandard": "c++23",
+            "compileCommands": "${workspaceFolder}/build/develop-win/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,132 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "binary-dir",
+      "binaryDir": "build/${presetName}",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "Debug",
+      "hidden": true,
+      "inherits": [
+        "binary-dir"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "RelWithDebInfo",
+      "hidden": true,
+      "inherits": [
+        "binary-dir"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "Release",
+      "hidden": true,
+      "inherits": [
+        "binary-dir"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "ninja",
+      "generator": "Ninja",
+      "inherits": [
+        "binary-dir"
+      ],
+      "hidden": true
+    },
+    {
+      "name": "ninja-multi",
+      "generator": "Ninja Multi-Config",
+      "inherits": [
+        "binary-dir"
+      ],
+      "hidden": false
+    },
+    {
+      "name": "ninja-multi-asan",
+      "generator": "Ninja Multi-Config",
+      "inherits": [
+        "binary-dir"
+      ],
+      "hidden": false,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fsanitize-address-use-after-scope"
+      }
+    },
+    {
+      "name": "ninja-multi-tsan",
+      "generator": "Ninja Multi-Config",
+      "inherits": [
+        "binary-dir"
+      ],
+      "hidden": false,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
+      "name": "llvm-clang",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      }
+    },
+    {
+      "name": "develop",
+      "inherits": [
+        "Debug",
+        "ninja",
+        "llvm-clang"
+      ],
+      "hidden": false,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fsanitize-address-use-after-scope",
+        "AUTOMATA_ENABLE_CACHE": "ON",
+        "AUTOMATA_BUILD_TESTS": "ON",
+        "AUTOMATA_WARNINGS_AS_ERRORS": "ON",
+        "AUTOMATA_ENABLE_CLANG_TIDY": "ON",
+        "AUTOMATA_ENABLE_CPPCHECK": "ON",
+        "AUTOMATA_ENABLE_CPPLINT": "ON",
+        "AUTOMATA_ENABLE_INCLUDE_WHAT_YOU_USE": "OFF",
+        "AUTOMATA_ENABLE_LINK_WHAT_YOU_USE": "ON"
+      }
+    },
+    {
+      "name": "xcode",
+      "generator": "Xcode",
+      "inherits": [
+        "binary-dir"
+      ],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "hidden": false
+    }
+  ]
+}

@@ -150,9 +150,9 @@ TEST_CASE("rotation", "[rhythm]") {
 TEST_CASE("concatenation", "[rhythm]") {
   constexpr Rhythm<2> first("x.");
   constexpr Rhythm<2> second(".x");
-  constexpr auto cat = first + second;
-  STATIC_REQUIRE(cat.length() == 4);
-  STATIC_REQUIRE(cat == Rhythm{"x..x"});
+  constexpr auto result = cat(first, second);
+  STATIC_REQUIRE(result.length() == 4);
+  STATIC_REQUIRE(result == Rhythm{"x..x"});
 }
 
 TEST_CASE("dac", "[rhythm]") {
