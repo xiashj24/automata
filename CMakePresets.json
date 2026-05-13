@@ -99,12 +99,10 @@
       "name": "develop",
       "inherits": [
         "Debug",
-        "ninja",
-        "llvm-clang"
+        "ninja"
       ],
       "hidden": false,
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fsanitize-address-use-after-scope",
         "AUTOMATA_ENABLE_CACHE": "ON",
         "AUTOMATA_BUILD_TESTS": "ON",
         "AUTOMATA_WARNINGS_AS_ERRORS": "ON",

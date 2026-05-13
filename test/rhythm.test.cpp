@@ -1,5 +1,3 @@
-#include <cstddef>
-
 #include <rhythm.hpp>
 #include <math.hpp>
 
