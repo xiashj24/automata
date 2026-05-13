@@ -102,6 +102,44 @@ public:
       result.set(i, (*this)[i * K]);
     return result;
   }
+  
+  // TODO: rewrite this after implementing rhythm -> signal conversion
+  [[nodiscard]] constexpr Rhythm shift(const Rhythm& clock) const noexcept {
+    std::array<std::size_t, N> positions{};
+    std::size_t num_ticks = 0;
+    for (std::size_t i = 0; i < N; ++i)
+      if (clock[i])
+        positions[num_ticks++] = i;
+
+    Rhythm result;
+    for (std::size_t j = 0; j < num_ticks; ++j)
+      result.set(positions[j],
+                 (*this)[positions[(j + num_ticks - 1) % num_ticks]]);
+    return result;
+  }
+
+  [[nodiscard]] constexpr Rhythm trigger() const noexcept {
+    Rhythm result;
+    for (std::size_t i = 0; i < N; ++i)
+      result.set(i, (*this)[i] && !(*this)[(i + N - 1) % N]);
+    return result;
+  }
+
+  template <std::size_t K>
+    requires(K > 0)
+  [[nodiscard]] constexpr Rhythm count() const noexcept {
+    Rhythm result;
+    std::size_t counter = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+      if ((*this)[i]) {
+        if (++counter == K) {
+          result.set(i);
+          counter = 0;
+        }
+      }
+    }
+    return result;
+  }
 
   template <std::size_t K>
     requires(K > 0)

@@ -248,7 +248,8 @@ TEST_CASE("euclid(3) on 8 steps produces tresillo", "[rhythm][euclid]") {
   STATIC_REQUIRE(beat == Rhythm<8>{"x..x.x.."});
 }
 
-TEST_CASE("euclid(4) on 16 steps produces four on the flour", "[rhythm][euclid]") {
+TEST_CASE("euclid(4) on 16 steps produces four on the flour",
+          "[rhythm][euclid]") {
   constexpr auto beat = Rhythm<16>::euclid(4);
   STATIC_REQUIRE(beat == Rhythm<16>{"x...x...x...x..."});
 }
@@ -261,4 +262,42 @@ TEST_CASE("euclid(5) on 8 steps produces son clave", "[rhythm][euclid]") {
 TEST_CASE("euclid hit count equals pulse count", "[rhythm][euclid]") {
   STATIC_REQUIRE(Rhythm<16>::euclid(5).hits() == 5);
   STATIC_REQUIRE(Rhythm<12>::euclid(7).hits() == 7);
+}
+
+TEST_CASE("counter", "[rhythm]") {
+  STATIC_REQUIRE(Rhythm<8>{"x...x.xx"}.count<2>() == Rhythm<8>("....x..x"));
+  STATIC_REQUIRE(Rhythm<8>{"x.x.x.x."}.count<2>() == Rhythm<8>("..x...x."));
+}
+
+TEST_CASE("gate to trigger emits pulse only on rising edge",
+          "[rhythm][trigger]") {
+  // sustained gate: only the onset of each gate burst becomes a trigger
+  constexpr auto gate = Rhythm<8>{"x...xx.."};
+  STATIC_REQUIRE(gate.trigger() == Rhythm<8>{"x...x..."});
+}
+
+TEST_CASE("gate to trigger cyclic: wraps around end of pattern",
+          "[rhythm][trigger]") {
+  // last step is high and first step is also high: no rising edge at step 0
+  constexpr auto gate = Rhythm<4>{"x..x"};
+  STATIC_REQUIRE(gate.trigger() == Rhythm<4>{"...x"});
+}
+
+TEST_CASE("shift delays each hit by one clock tick (uniform clock)",
+          "[rhythm][shift]") {
+  constexpr auto data = Rhythm<8>{"x...x..."};
+  constexpr auto clock = Rhythm<8>{"x.x.x.x."};
+  STATIC_REQUIRE(data.shift(clock) == Rhythm<8>{"..x...x."});
+}
+
+TEST_CASE("shift with non-uniform clock", "[rhythm][shift]") {
+  constexpr auto data = Rhythm<8>{"x......."};
+  constexpr auto clock = Rhythm<8>{"x...x.x."};
+  STATIC_REQUIRE(data.shift(clock) == Rhythm<8>{"....x..."});
+}
+
+TEST_CASE("shift twice delays by two clock ticks", "[rhythm][shift]") {
+  constexpr auto data = Rhythm<8>{"x...x..."};
+  constexpr auto clock = Rhythm<8>{"x.x.x.x."};
+  STATIC_REQUIRE(data.shift(clock).shift(clock) == Rhythm<8>{"x...x..."});
 }

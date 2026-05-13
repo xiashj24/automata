@@ -94,7 +94,6 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 - [Reactable](https://reactable.com/)
 - Faust
 - Bespoke Synth
-- Sugar Bytes Nest
 - games of Zachtronics
 - a whole bunch of similar algorave projects (dang! people have thought about this before...)
     - https://github.com/tarpit-collective/cane
@@ -109,6 +108,31 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
     - https://github.com/nnirror/facet
     - https://github.com/lucretiomsp/Coypu
 
+## Sugar Bytes Nest
+
+inspired by a breakboard prototype of logical ICs
+
+this maps easily to an object oriented approach
+
+- 4051 multiplexer
+- shift register
+- 8 bit DAC
+- 8 bit ADC
+- clock division: 1/2/4/8/16/32/64/128 (with swing built in)
+- delay
+- clock divider
+- envelope
+- S&H
+- counters
+- logic gates: or, nor, xor, xnor, and, nand, >, <, ==, !=
+- gate to trigger
+- flip-flop
+- geiger: Binary waveform (Low/High) with random occurrence.
+- MIDI note, gate, velocity, cc, pitchbend, play
+- arpeggiator with up/down trigger input
+- scale
+
+These building blocks corresponds to different abstractions in a functional approach.
 
 ## music hardware
 
