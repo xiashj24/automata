@@ -66,17 +66,24 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
     - Generalizations of Velvet Noise and Their Use in 1-Bit Music
 - minimalism
     - Ryoji Ikeda
-- aethetic of aliasing
+- aethetics of aliasing
 - 作って動かすALife
     - emergence, boid
 - read about literature on algorithmic composition by computer music research people
 - [Bret Victor: Inventing on Principle](https://www.youtube.com/watch?v=PUv66718DII)
     - https://thebookofshaders.com/edit.php
     - shadertoy
-- number theory and pseudo-random number generators
+- number theory, combinitorial mathematics, and pseudo-random number generators
 - [Algorithmic Pattern project](https://algorithmicpattern.org/) by Alex Mclean
+- music theory: son clave, tresillo, world music
+    - The Geometry of Musical Rhythm by Godfried T. Toussaint
 
-## related projects 
+## Books
+
+- Generative Art: A practical guide using Processing
+- A New Kind of Science by Stephen Wolfram
+
+## related projects
 
 - [sapf: Sound As Pure Form](https://github.com/lfnoise/sapf) and SuperCollider
 - tidal cycles and [strudel](https://strudel.cc/)

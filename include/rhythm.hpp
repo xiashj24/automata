@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <string_view>
 #include <math.hpp>
+#include <euclid.hpp>
 
 namespace automata {
 
@@ -15,7 +16,13 @@ class Rhythm {
 public:
   constexpr Rhythm() noexcept = default;
 
-  // TODO: eulcid constructor (or factory?)
+  [[nodiscard]] static constexpr Rhythm euclid(uint32_t pulses) noexcept {
+    Rhythm result;
+    for (std::size_t i = 0; i < N; ++i)
+      result.set(i, euclid_simple(pulses, static_cast<uint32_t>(N),
+                                  static_cast<uint32_t>(i)));
+    return result;
+  }
 
   // "x.x.xxx.x." — 'x'/'X'/'1' = hit, anything else = rest
   constexpr explicit Rhythm(std::string_view sv) noexcept {
@@ -71,31 +78,72 @@ public:
     return out;
   }
 
-  // boolean operators (same length, result keeps length)
-  [[nodiscard]] constexpr Rhythm operator&(const Rhythm& rhs) const noexcept {
+  template <std::size_t K>
+    requires(K > 0)
+  [[nodiscard]] constexpr Rhythm<N * K> stretch() const noexcept {
+    Rhythm<N * K> result;
+    for (std::size_t i = 0; i < N; ++i)
+      result.set(i * K, (*this)[i]);
+    return result;
+  }
+
+  template <std::size_t K>
+    requires(K > 0 && K < N)
+  [[nodiscard]] constexpr Rhythm<(N + K - 1) / K> compress() const noexcept {
+    constexpr std::size_t output_size = (N + K - 1) / K;
+    Rhythm<output_size> result;
+    for (std::size_t i = 0; i < output_size; ++i)
+      result.set(i, (*this)[i * K]);
+    return result;
+  }
+
+  template <std::size_t K>
+    requires(K > 0)
+  [[nodiscard]] constexpr Rhythm permute() const noexcept {
+    std::array<bool, N> steps{};
+    for (std::size_t i = 0; i < N; ++i)
+      steps[i] = (*this)[i];
+    for (std::size_t k = 0; k < K; ++k)
+      std::ranges::next_permutation(steps);
+    Rhythm result;
+    for (std::size_t i = 0; i < N; ++i)
+      result.set(i, steps[i]);
+    return result;
+  }
+
+  // and
+  [[nodiscard]] constexpr Rhythm operator*(const Rhythm& rhs) const noexcept {
     Rhythm out;
     for (std::size_t i = 0; i < N; ++i)
       out.set(i, (*this)[i] && rhs[i]);
     return out;
   }
-  [[nodiscard]] constexpr Rhythm operator|(const Rhythm& rhs) const noexcept {
+
+  // or
+  [[nodiscard]] constexpr Rhythm operator+(const Rhythm& rhs) const noexcept {
     Rhythm out;
     for (std::size_t i = 0; i < N; ++i)
       out.set(i, (*this)[i] || rhs[i]);
     return out;
   }
+
+  // not
   [[nodiscard]] constexpr Rhythm operator~() const noexcept {
     Rhythm out;
     for (std::size_t i = 0; i < N; ++i)
       out.set(i, !(*this)[i]);
     return out;
   }
+
+  // shorthand for a * !b
   [[nodiscard]] constexpr Rhythm operator-(const Rhythm& rhs) const noexcept {
     Rhythm out;
     for (std::size_t i = 0; i < N; ++i)
       out.set(i, (*this)[i] && (!rhs[i]));
     return out;
   }
+
+  // xor
   [[nodiscard]] constexpr Rhythm operator^(const Rhythm& rhs) const noexcept {
     Rhythm out;
     for (std::size_t i = 0; i < N; ++i)
@@ -122,6 +170,7 @@ public:
       out.set((i + n) % N, (*this)[i]);
     return out;
   }
+
   [[nodiscard]] constexpr Rhythm operator<<(std::size_t n) const noexcept {
     n %= N;
     Rhythm out;
@@ -142,19 +191,19 @@ Rhythm(const char (&)[M]) -> Rhythm<M - 1>;
 // boolean ops between different-length rhythms: tile both to lcm(N, M)
 template <std::size_t N, std::size_t M>
   requires(N != M)
-[[nodiscard]] constexpr Rhythm<lcm(N, M)> operator&(
+[[nodiscard]] constexpr Rhythm<lcm(N, M)> operator*(
     const Rhythm<N>& lhs,
     const Rhythm<M>& rhs) noexcept {
   constexpr std::size_t len = lcm(N, M);
-  return lhs.template tile<len>() & rhs.template tile<len>();
+  return lhs.template tile<len>() * rhs.template tile<len>();
 }
 template <std::size_t N, std::size_t M>
   requires(N != M)
-[[nodiscard]] constexpr Rhythm<lcm(N, M)> operator|(
+[[nodiscard]] constexpr Rhythm<lcm(N, M)> operator+(
     const Rhythm<N>& lhs,
     const Rhythm<M>& rhs) noexcept {
   constexpr std::size_t len = lcm(N, M);
-  return lhs.template tile<len>() | rhs.template tile<len>();
+  return lhs.template tile<len>() + rhs.template tile<len>();
 }
 template <std::size_t N, std::size_t M>
   requires(N != M)
@@ -173,51 +222,15 @@ template <std::size_t N, std::size_t M>
   return lhs.template tile<len>() - rhs.template tile<len>();
 }
 
-// concatenation: cat(Rhythm<N>, Rhythm<M>) -> Rhythm<N+M>
+// concatenation: Rhythm<N> | Rhythm<M> -> Rhythm<N+M>
 template <std::size_t N, std::size_t M>
-[[nodiscard]] constexpr Rhythm<N + M> cat(const Rhythm<N>& lhs,
+[[nodiscard]] constexpr Rhythm<N + M> operator|(const Rhythm<N>& lhs,
                                                 const Rhythm<M>& rhs) noexcept {
   Rhythm<N + M> result;
   for (std::size_t i = 0; i < N; ++i)
     result.set(i, lhs[i]);
   for (std::size_t i = 0; i < M; ++i)
     result.set(N + i, rhs[i]);
-  return result;
-}
-
-// interleave: zip K rhythms step by step -> Rhythm<N*K>
-// result[j*K + k] = inputs[k][j]
-template <std::size_t N, std::size_t... Ms>
-  requires(... && (Ms == N))
-[[nodiscard]] constexpr Rhythm<N * (1 + sizeof...(Ms))> interleave(
-    const Rhythm<N>& first,
-    const Rhythm<Ms>&... rest) noexcept {
-  constexpr std::size_t count = 1 + sizeof...(rest);
-  Rhythm<N * count> result;
-  std::size_t chan = 0;
-  auto write = [&](const Rhythm<N>& input) noexcept {
-    for (std::size_t j = 0; j < N; ++j)
-      result.set(j * count + chan, input[j]);
-    ++chan;
-  };
-  write(first);
-  (write(rest), ...);
-  return result;
-}
-
-// next_permutation: advance to the next lexicographic arrangement of steps.
-// Same number of hits. Wraps to first permutation (rests before hits) after
-// last.
-template <std::size_t N>
-[[nodiscard]] constexpr Rhythm<N> next_permutation(
-    const Rhythm<N>& rhythm) noexcept {
-  std::array<bool, N> steps{};
-  for (std::size_t i = 0; i < N; ++i)
-    steps[i] = rhythm[i];
-  std::ranges::next_permutation(steps);
-  Rhythm<N> result;
-  for (std::size_t i = 0; i < N; ++i)
-    result.set(i, steps[i]);
   return result;
 }
 

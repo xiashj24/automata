@@ -6,7 +6,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 using automata::lcm;
-using automata::next_permutation;
 using automata::Rhythm;
 // using automata::interleave;
 
@@ -81,7 +80,7 @@ TEST_CASE("tiling", "[rhythm]") {
 TEST_CASE("binary operator of same length)", "[rhythm]") {
   constexpr Rhythm<4> lhs("x.x.");
   constexpr Rhythm<4> rhs("xx..");
-  constexpr auto result = lhs & rhs;
+  constexpr auto result = lhs * rhs;
   STATIC_REQUIRE(result.length() == 4);
   STATIC_REQUIRE(result == Rhythm{"x..."});
 }
@@ -90,14 +89,14 @@ TEST_CASE("binary operator of different length auto expand to lcm",
           "[rhythm]") {
   constexpr Rhythm<4> lhs("x.x.");
   constexpr Rhythm<9> rhs = Rhythm{"x..."}.tile<9>();
-  constexpr auto result = lhs & rhs;
+  constexpr auto result = lhs * rhs;
   STATIC_REQUIRE(result.length() == lcm(4, 9));
 }
 
-TEST_CASE("operator| different length", "[rhythm]") {
+TEST_CASE("operator+ different length", "[rhythm]") {
   constexpr Rhythm<4> lhs{"x..."};
   constexpr Rhythm<6> rhs{"...x.."};
-  constexpr auto result = lhs | rhs;
+  constexpr auto result = lhs + rhs;
   STATIC_REQUIRE(result.length() == lcm(4, 6));
   STATIC_REQUIRE(result[0]);
   STATIC_REQUIRE(result[3]);
@@ -150,9 +149,18 @@ TEST_CASE("rotation", "[rhythm]") {
 TEST_CASE("concatenation", "[rhythm]") {
   constexpr Rhythm<2> first("x.");
   constexpr Rhythm<2> second(".x");
-  constexpr auto result = cat(first, second);
+  constexpr auto result = first | second;
   STATIC_REQUIRE(result.length() == 4);
   STATIC_REQUIRE(result == Rhythm{"x..x"});
+}
+
+TEST_CASE("concatenate 3 rhythms", "[rhythm]") {
+  constexpr Rhythm<3> first("x..");
+  constexpr Rhythm<3> second(".x.");
+  constexpr Rhythm<3> third("..x");
+  constexpr auto result = first | second | third;
+  STATIC_REQUIRE(result.length() == 9);
+  STATIC_REQUIRE(result == Rhythm{"x...x...x"});
 }
 
 TEST_CASE("dac", "[rhythm]") {
@@ -161,66 +169,84 @@ TEST_CASE("dac", "[rhythm]") {
   STATIC_REQUIRE(val == 0b0101);
 }
 
-// TEST_CASE("interleave", "[rhythm]") {
-//   constexpr Rhythm<2> aa("x.");
-//   constexpr Rhythm<2> bb(".x");
-//   constexpr auto zipped = interleave(aa, bb);
-
-//   static_assert(zipped.steps() == 4);
-//   // result[j*2 + chan]: aa[0]=x at pos 0, bb[0]=. at pos 1, aa[1]=. at pos
-//   2, bb[1]=x at pos 3 REQUIRE(zipped[0]); REQUIRE_FALSE(zipped[1]);
-//   REQUIRE_FALSE(zipped[2]);
-//   REQUIRE(zipped[3]);
-// }
-
-TEST_CASE("next_permutation 2-step cycle", "[rhythm][next_permutation]") {
-  // "x." is the last permutation; wraps to ".x" (first, ascending order)
-  constexpr Rhythm<2> hit_first{"x."};
-  STATIC_REQUIRE(next_permutation(hit_first) == Rhythm<2>{".x"});
-
-  // ".x" advances to "x."
-  constexpr Rhythm<2> rest_first{".x"};
-  STATIC_REQUIRE(next_permutation(rest_first) == Rhythm<2>{"x."});
+TEST_CASE("stretch", "[rhythm]") {
+  constexpr Rhythm<4> original{"xxxx"};
+  constexpr auto stretched_2x = original.stretch<2>();
+  constexpr auto stretched_4x = original.stretch<4>();
+  STATIC_REQUIRE(stretched_2x.length() == 8);
+  STATIC_REQUIRE(stretched_4x.length() == 16);
+  STATIC_REQUIRE(stretched_2x == Rhythm{"x.x.x.x."});
+  STATIC_REQUIRE(stretched_4x == Rhythm{"x...x...x...x..."});
 }
 
-TEST_CASE("next_permutation 3-step full cycle with 1 hit", "[rhythm][next_permutation]") {
-  // C(3,1) = 3 permutations: "..x" -> ".x." -> "x.." -> "..x"
-  constexpr Rhythm<3> first{"..x"};
-  constexpr auto second = next_permutation(first);
-  STATIC_REQUIRE(second == Rhythm<3>{".x."});
-  constexpr auto third = next_permutation(second);
-  STATIC_REQUIRE(third == Rhythm<3>{"x.."});
-  constexpr auto wrapped = next_permutation(third);
-  STATIC_REQUIRE(wrapped == first);
+TEST_CASE("compress takes every K-th step", "[rhythm]") {
+  constexpr Rhythm<8> original{"x.x.x.x."};
+  constexpr auto compressed = original.compress<2>();
+  STATIC_REQUIRE(compressed.length() == 4);
+  STATIC_REQUIRE(compressed == Rhythm{"xxxx"});
 }
 
-TEST_CASE("next_permutation 4-step count with 2 hits equals C(4,2)=6", "[rhythm][next_permutation]") {
-  constexpr Rhythm<4> first{"..xx"};
-  constexpr auto p1 = next_permutation(first);
-  constexpr auto p2 = next_permutation(p1);
-  constexpr auto p3 = next_permutation(p2);
-  constexpr auto p4 = next_permutation(p3);
-  constexpr auto p5 = next_permutation(p4);
-  constexpr auto wrapped = next_permutation(p5);
-  STATIC_REQUIRE(wrapped == first);
-  STATIC_REQUIRE_FALSE(p1 == first);
-  STATIC_REQUIRE_FALSE(p2 == first);
-  STATIC_REQUIRE_FALSE(p3 == first);
-  STATIC_REQUIRE_FALSE(p4 == first);
-  STATIC_REQUIRE_FALSE(p5 == first);
+TEST_CASE("compress with non-divisor K", "[rhythm]") {
+  constexpr Rhythm<8> original{"x......."};
+  constexpr auto compressed = original.compress<3>();
+  STATIC_REQUIRE(compressed.length() == 3);
+  STATIC_REQUIRE(compressed == Rhythm{"x.."});
 }
 
-TEST_CASE("next_permutation of all-hits or no-hits returns itself", "[rhythm][next_permutation]") {
-  constexpr Rhythm<3> all_hits{"xxx"};
-  STATIC_REQUIRE(next_permutation(all_hits) == all_hits);
-
-  constexpr Rhythm<3> no_hits{"..."};
-  STATIC_REQUIRE(next_permutation(no_hits) == no_hits);
+TEST_CASE("compress discards intermediate steps", "[rhythm]") {
+  constexpr Rhythm<4> original{".x.x"};
+  constexpr auto compressed = original.compress<2>();
+  STATIC_REQUIRE(compressed.length() == 2);
+  STATIC_REQUIRE(compressed == Rhythm{".."});
 }
 
-TEST_CASE("next_permutation preserves hit count", "[rhythm][next_permutation]") {
+TEST_CASE("stretch then compress is identity", "[rhythm]") {
   constexpr Rhythm<4> original{"x.x."};
-  constexpr auto permuted = next_permutation(original);
-  STATIC_REQUIRE(original.hits() == permuted.hits());
+  STATIC_REQUIRE(original.stretch<2>().compress<2>() == original);
 }
 
+TEST_CASE("compress then stretch is lossy", "[rhythm]") {
+  constexpr Rhythm<4> original{"xxx."};
+  STATIC_REQUIRE(original.compress<2>().stretch<2>() != original);
+}
+
+TEST_CASE("permute<1> advances one permutation", "[rhythm][permute]") {
+  constexpr Rhythm<4> first{"..xx"};
+  STATIC_REQUIRE(first.permute<1>() == Rhythm<4>{".x.x"});
+  STATIC_REQUIRE(first.permute<1>().permute<1>() == Rhythm<4>{".xx."});
+}
+
+TEST_CASE("permute<K> advances K permutations at once", "[rhythm][permute]") {
+  constexpr Rhythm<4> first{"..xx"};
+  STATIC_REQUIRE(first.permute<3>() == Rhythm<4>{"x..x"});
+  STATIC_REQUIRE(first.permute<6>() == first);  // C(4,2)=6 full cycle
+}
+
+TEST_CASE("permute preserves hit count", "[rhythm][permute]") {
+  constexpr Rhythm<4> original{"x.x."};
+  STATIC_REQUIRE(original.hits() == original.permute<1>().hits());
+  STATIC_REQUIRE(original.hits() == original.permute<2>().hits());
+  STATIC_REQUIRE(original.hits() == original.permute<3>().hits());
+}
+
+TEST_CASE("permute of trivial rhythms returns itself", "[rhythm][permute]") {
+  constexpr Rhythm<3> all_hits{"xxx"};
+  STATIC_REQUIRE(all_hits.permute<1>() == all_hits);
+  constexpr Rhythm<3> no_hits{"..."};
+  STATIC_REQUIRE(no_hits.permute<1>() == no_hits);
+}
+
+TEST_CASE("euclid(3) on 8 steps produces tresillo", "[rhythm][euclid]") {
+  constexpr auto beat = Rhythm<8>::euclid(3);
+  STATIC_REQUIRE(beat == Rhythm<8>{"x..x.x.."});
+}
+
+TEST_CASE("euclid(5) on 8 steps produces son clave", "[rhythm][euclid]") {
+  constexpr auto beat = Rhythm<8>::euclid(5);
+  STATIC_REQUIRE(beat == Rhythm<8>{"x.xx.xx."});
+}
+
+TEST_CASE("euclid hit count equals pulse count", "[rhythm][euclid]") {
+  STATIC_REQUIRE(Rhythm<16>::euclid(5).hits() == 5);
+  STATIC_REQUIRE(Rhythm<12>::euclid(7).hits() == 7);
+}
