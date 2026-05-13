@@ -110,7 +110,7 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
     - https://github.com/lucretiomsp/Coypu
 
 
-## modular synths
+## music hardware
 
 - DivSkip
 - [Intellijel Metropolix](https://intellijel.com/shop/eurorack/metropolix/)
@@ -118,3 +118,4 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 - Rob Hordik Benjolin
 - Music Thing Modular Turing Machine with expanders
 - Joranalogue Select 2
+- Neutral Labs LUNA

@@ -31,7 +31,8 @@ cpmaddpackage(
   catchorg/Catch2
   VERSION
   3.14.0
-  SYSTEM YES)
+  SYSTEM
+  YES)
 
 # MARK: library interface
 add_library(automata INTERFACE)
@@ -74,6 +75,12 @@ if(AUTOMATA_ENABLE_COVERAGE)
 endif()
 
 include(CTest)
+
+# MARK: automata-render executable
+add_executable(automata-render src/main.cpp)
+target_link_libraries(automata-render PRIVATE automata::automata)
+target_include_directories(automata-render PRIVATE src)
+target_compile_definitions(automata-render PRIVATE AUTOMATA_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if(AUTOMATA_BUILD_TESTS)
   message(STATUS "Building Tests.")
