@@ -20,5 +20,5 @@ constexpr bool euclid(uint32_t pulses,
 
 // 1st step is always on
 constexpr bool euclid_simple(uint32_t pulses, uint32_t steps, uint32_t index) {
-  return euclid(pulses, steps, steps / pulses, index);
+  return euclid(pulses, steps, (steps - 1) / pulses, index);
 }

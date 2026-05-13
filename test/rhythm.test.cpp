@@ -15,6 +15,13 @@ TEST_CASE("noneness", "[rhythm]") {
   STATIC_REQUIRE_FALSE(Rhythm<8>{"x.x.x.x."}.none());
 }
 
+TEST_CASE("fill", "[rhythm]") {
+  STATIC_REQUIRE(Rhythm<1>{}.fill().rests() == 0);
+  STATIC_REQUIRE(Rhythm<2>{}.fill().rests() == 0);
+  STATIC_REQUIRE(Rhythm<4>{}.fill().rests() == 0);
+  STATIC_REQUIRE(Rhythm<8>{}.fill().rests() == 0);
+}
+
 TEST_CASE("default constructed rhythm is none", "[rhythm]") {
   constexpr Rhythm<4> beat;
   STATIC_REQUIRE(beat.none());
@@ -239,6 +246,11 @@ TEST_CASE("permute of trivial rhythms returns itself", "[rhythm][permute]") {
 TEST_CASE("euclid(3) on 8 steps produces tresillo", "[rhythm][euclid]") {
   constexpr auto beat = Rhythm<8>::euclid(3);
   STATIC_REQUIRE(beat == Rhythm<8>{"x..x.x.."});
+}
+
+TEST_CASE("euclid(4) on 16 steps produces four on the flour", "[rhythm][euclid]") {
+  constexpr auto beat = Rhythm<16>::euclid(4);
+  STATIC_REQUIRE(beat == Rhythm<16>{"x...x...x...x..."});
 }
 
 TEST_CASE("euclid(5) on 8 steps produces son clave", "[rhythm][euclid]") {

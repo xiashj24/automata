@@ -16,6 +16,12 @@ class Rhythm {
 public:
   constexpr Rhythm() noexcept = default;
 
+  [[nodiscard]] static constexpr Rhythm fill() noexcept {
+    Rhythm result;
+    result.bits.set();
+    return result;
+  }
+
   [[nodiscard]] static constexpr Rhythm euclid(uint32_t pulses) noexcept {
     Rhythm result;
     for (std::size_t i = 0; i < N; ++i)
