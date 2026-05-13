@@ -3,15 +3,18 @@
 
 namespace automata {
 
-// The harness wraps the user's rhythm_exprs() function. emit() serializes each
-// rhythm to stdout as a length/bits pair; main() calls rhythm_exprs().
-// {USER_CODE} is replaced with the content of the user's expression file.
+// emit() serializes a Rhythm<N> to stdout as a length/bits pair.
+// {USER_CODE} is replaced with the .rhythm file content.
+// {MAIN_BODY} is replaced with either:
+//   - std::apply over tracks() if a tracks() function is found, or
+//   - individual emit(track_*()) calls discovered by name scanning.
 
 // clang-format off
 constexpr std::string_view harness_template = R"cpp(
 #include <rhythm.hpp>
 #include <cstddef>
 #include <iostream>
+#include <tuple>
 using namespace automata;
 
 template <std::size_t N>
@@ -27,7 +30,7 @@ void emit(const Rhythm<N>& rhythm) {
 // --- END USER CODE ---
 
 int main() {
-    rhythm_exprs();
+{MAIN_BODY}
 }
 )cpp";
 // clang-format on

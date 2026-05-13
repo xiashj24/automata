@@ -16,3 +16,6 @@ coverage.info
 Testing
 
 !.claude/settings.json
+
+# visualization
+*.ppm

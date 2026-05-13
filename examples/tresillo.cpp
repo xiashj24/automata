@@ -1,7 +1,7 @@
 #include <rhythm.hpp>
+#include <tuple>
 using namespace automata;
 
-// Tresillo: the foundational 3-against-8 clave pattern in Afro-Cuban music.
-void rhythm_exprs() {
-  emit(Rhythm<8>::euclid(3));
+constexpr auto tracks() {
+    return std::make_tuple(Rhythm<8>::euclid(3));
 }
