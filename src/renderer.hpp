@@ -1,5 +1,5 @@
 #pragma once
-#include "ppm.hpp"
+#include "image.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <span>

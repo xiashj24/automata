@@ -1,0 +1,10 @@
+{
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "examples/.*\\.cpp$",
+                "cmd": "${workspaceFolder}/build/develop/automata-render \"${file}\""
+            }
+        ]
+    }
+}

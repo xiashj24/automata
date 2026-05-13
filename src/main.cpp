@@ -1,8 +1,3 @@
-#include "compiler.hpp"
-#include "harness_template.hpp"
-#include "ppm.hpp"
-#include "renderer.hpp"
-
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -13,6 +8,11 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include "compiler.hpp"
+#include "harness_template.hpp"
+#include "image.hpp"
+#include "renderer.hpp"
 
 #ifndef AUTOMATA_INCLUDE_DIR
 #error "AUTOMATA_INCLUDE_DIR must be defined by CMake"
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     const auto dot = input_path.rfind('.');
     const std::string stem =
         dot == std::string::npos ? input_path : input_path.substr(0, dot);
-    return stem + ".ppm";
+    return stem + ".bmp";
   }();
 
   const auto user_code = read_file(input_path.c_str());
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "automata-render: cannot write '" << output_path << "'\n";
     return 1;
   }
-  automata::write_ppm(ppm_file, output.pixels, output.width, output.height);
+  automata::write_bmp(ppm_file, output.pixels, output.width, output.height);
 
   std::cout << result.rhythm_bits_list.size() << " track(s) (" << output.width
             << "x" << output.height << " px) -> " << output_path << "\n";

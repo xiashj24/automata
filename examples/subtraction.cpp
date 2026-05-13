@@ -13,7 +13,7 @@ constexpr auto snare() {
   return kick() >> rotation;
 }
 constexpr auto hi_hat() {
-  return Rhythm<16>::fill() - snare();
+  return (Rhythm<16>::fill() - snare()) ^ kick();
 }
 
 constexpr auto tracks() {

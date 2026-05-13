@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Render Rhythm",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/develop/automata-render",
+            "args": ["${file}"],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

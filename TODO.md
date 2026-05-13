@@ -1,2 +1,3 @@
 - make a c++ constexpr prototype library
 - make the main loop
+- use a library for bmp image
