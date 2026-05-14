@@ -67,7 +67,7 @@ CheckOptions:
   - key: readability-identifier-length.IgnoredVariableNames
     value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|in|it|id|fs|dt|ok|sp|up|nn|ec|cc|io|sv|dl|r1|r2|p0|p1|p2|s1|s2|m1|m2|fn|fc|hz|db|ms|ch'
   - key: readability-identifier-length.IgnoredParameterNames
-    value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|in|id|fs|dt|fn|fc|sp|up|ch'
+    value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|h|in|id|fs|dt|fn|fc|sp|up|ch'
   - key: readability-identifier-length.IgnoredLoopCounterNames
     value: 'x|y|z|i|j|n|t|s|m|v|p|e|w|d|b|a|f|k|r|ii|jj|kk'
   - key: readability-identifier-length.MinimumVariableNameLength

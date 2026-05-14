@@ -98,8 +98,8 @@
     {
       "name": "develop",
       "inherits": [
-        "Debug",
-        "ninja"
+        "ninja-multi-asan",
+        "llvm-clang"
       ],
       "hidden": false,
       "cacheVariables": {

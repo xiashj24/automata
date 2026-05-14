@@ -1,154 +1,123 @@
 #pragma once
-#include <concepts>
+#include <span>
 #include <functional>
-#include <string>
-#include <string_view>
-#include <cstdint>
+#include <algorithm>
+
 #include <euclid.hpp>
+
+/**
+ * @brief generic signal type
+ * can represent triggers or audio signals, depending on the tick rate
+ * the API is largely inspired by discrete time signal processing theory
+ */
+
+// order of implementation
+// impulse → step → delay → scale/add → difference → convolution → accumulator →
+// feedback → FFT
+
+// TODO: construct signal from samples (fir)
+
+// should you use unsigned int for index and argument
 
 namespace automata {
 
-// NOLINTBEGIN(clang-analyzer-core.StackAddressEscape)
-// std::function deep-copies its callable — no stack address actually escapes.
-// clang-analyzer does not model std::function ownership correctly.
 class Signal {
+  using Func = std::function<float(int)>;
+  // should you use std::shared_ptr?
 public:
-  using Func = std::function<bool(int)>;
+  explicit Signal(Func generate) : gen(std::move(generate)) {}
 
-  explicit Signal(Func func) : fn_(std::move(func)) {}
+  // evaluation
+  [[nodiscard]] float operator[](int i) const { return gen(i); }
 
-  [[nodiscard]] bool operator()(int step) const { return fn_(step); }
+  // fundamental signals
 
-  // Time operations
+  // DC signal
+  explicit Signal(float v) : gen([v](int) { return v; }) {}
 
-  [[nodiscard]] Signal operator>>(int offset) const {
-    return Signal([fn = fn_, offset](int step) { return fn(step - offset); });
+  static Signal impulse() {
+    return Signal([](int i) { return (i == 0) ? 1.f : 0.f; });
   }
 
-  [[nodiscard]] Signal operator<<(int offset) const {
-    return Signal([fn = fn_, offset](int step) { return fn(step + offset); });
+  static Signal step() {
+    return Signal([](int i) { return (i >= 0) ? 1.f : 0.f; });
   }
 
-  // no use
-  [[nodiscard]] Signal tile(int period) const {
-    return Signal([fn = fn_, period](int step) {
-      return fn(((step % period) + period) % period);
+  // impulse train
+  static Signal every(int period) {
+    return Signal([period](int i) { return ((i % period) == 0) ? 1.f : 0.f; });
+  }
+
+  [[nodiscard]] Signal delay(int z) const {
+    return Signal([x = *this, z](int i) { return x[i - z]; });
+  }  // or, use z(-d)?, should you forbid minus delay?
+
+  [[nodiscard]] Signal convolve(const Signal& h) const {
+    // assume both are causal signals (0 for i < 0)
+    return Signal([x = *this, h](int n) {
+      float sum = 0.f;
+      for (int k = 0; k <= n; ++k)
+        sum += x[k] * h[n - k];
+      return sum;
     });
   }
 
-  // stretch: place each hit at step*factor, gaps become false
-  [[nodiscard]] Signal stretch(int factor) const {
-    return Signal([fn = fn_, factor](int step) {
-      return step % factor == 0 && fn(step / factor);
-    });
+  // scale
+  [[nodiscard]] Signal operator*(float v) const {
+    return Signal([x = *this, v](int i) { return x[i] * v; });
   }
 
-  // compress: take every factor-th step of the source
-  [[nodiscard]] Signal compress(int factor) const {
-    return Signal([fn = fn_, factor](int step) { return fn(step * factor); });
+  [[nodiscard]] Signal operator/(float v) const {
+    return Signal([x = *this, v](int i) { return x[i] / v; });
   }
 
-  // no good
-  // concat: first first_length steps from this, then other (offset to start at
-  // 0)
-  [[nodiscard]] Signal concat(Signal other, int first_length) const {
-    return Signal([lhs = fn_, rhs = other.fn_, first_length](int step) {
-      return step < first_length ? lhs(step) : rhs(step - first_length);
-    });
+  // DC offset
+  [[nodiscard]] Signal operator+(float v) const {
+    return Signal([x = *this, v](int i) { return x[i] + v; });
   }
 
-  // Logic operations
-
-  [[nodiscard]] Signal operator+(const Signal& rhs) const {
-    return Signal([lhs = fn_, rhs = rhs.fn_](int step) {
-      return lhs(step) || rhs(step);
-    });
+  [[nodiscard]] Signal operator-(float v) const {
+    return Signal([x = *this, v](int i) { return x[i] - v; });
   }
 
-  [[nodiscard]] Signal operator*(const Signal& rhs) const {
-    return Signal([lhs = fn_, rhs = rhs.fn_](int step) {
-      return lhs(step) && rhs(step);
-    });
-  }
-
-  [[nodiscard]] Signal operator~() const {
-    return Signal([fn = fn_](int step) { return !fn(step); });
-  }
-
-  [[nodiscard]] Signal operator-(const Signal& rhs) const {
-    return Signal([lhs = fn_, rhs = rhs.fn_](int step) {
-      return lhs(step) && !rhs(step);
-    });
-  }
-
-  [[nodiscard]] Signal operator^(const Signal& rhs) const {
-    return Signal(
-        [lhs = fn_, rhs = rhs.fn_](int step) { return lhs(step) ^ rhs(step); });
-  }
-
-  // trigger: rising edge — true only on the first step of a gate burst
-  [[nodiscard]] Signal trigger() const {
-    return Signal([fn = fn_](int step) { return fn(step) && !fn(step - 1); });
-  }
-
-  // count: fire on every k-th hit; recomputes from step 0 for referential
-  // transparency
-  [[nodiscard]] Signal count(int k) const {
-    return Signal([fn = fn_, k](int step) {
-      int counter = 0;
-      for (int i = 0; i <= step; ++i)
-        if (fn(i) && ++counter == k) {
-          counter = 0;
-          if (i == step)
-            return true;
-        }
-      return false;
-    });
-  }
-
-  // Generators
-
-  [[nodiscard]] static Signal euclid(int pulses, int steps) {
-    return Signal([pulses, steps](int step) {
-      int index = ((step % steps) + steps) % steps;
-      return euclid_simple(static_cast<uint32_t>(pulses),
-                           static_cast<uint32_t>(steps),
-                           static_cast<uint32_t>(index));
-    });
-  }
-
-  [[nodiscard]] static Signal fill() {
-    return Signal([](int) { return true; });
-  }
-
-  [[nodiscard]] static Signal rest() {
-    return Signal([](int) { return false; });
-  }
-
-  // from_pattern: periodic gate from "x.x." notation ('x'/'X'/'1' = hit)
-  [[nodiscard]] static Signal from_pattern(std::string_view sv) {
-    return Signal([pattern = std::string(sv)](int step) {
-      int period = static_cast<int>(pattern.size());
-      int index = ((step % period) + period) % period;
-      char c = pattern[static_cast<std::size_t>(index)];
-      return c == 'x' || c == 'X' || c == '1';
-    });
-  }
-
-  std::string to_pattern(int length) {
-    std::string result(static_cast<std::size_t>(length), '.');
-    for (int i = 0; i < length; ++i)
-      if (fn_(i))
-        result[static_cast<std::size_t>(i)] = 'x';
-
-    return result;
+  // render block of samples
+  void render(std::span<float> buf, int start = 0) {
+    std::generate(buf.begin(), buf.end(),
+                  [&, i = start]() mutable { return gen(i++); });
   }
 
 private:
-  Func fn_;
+  Func gen;
 };
-// NOLINTEND(clang-analyzer-core.StackAddressEscape)
 
-using Gate = Signal;
+// arithmetic
+[[nodiscard]] inline Signal operator+(const Signal& lhs, const Signal& rhs) {
+  return Signal([lhs, rhs](int i) { return lhs[i] + rhs[i]; });
+}
+
+[[nodiscard]] inline Signal operator-(const Signal& lhs, const Signal& rhs) {
+  return Signal([lhs, rhs](int i) { return lhs[i] - rhs[i]; });
+}
+
+[[nodiscard]] inline Signal operator*(const Signal& lhs, const Signal& rhs) {
+  return Signal([lhs, rhs](int i) { return lhs[i] * rhs[i]; });
+}
+
+[[nodiscard]] inline Signal operator/(const Signal& lhs, const Signal& rhs) {
+  return Signal([lhs, rhs](int i) { return lhs[i] / rhs[i]; });
+}
+
+// scalar arithmetic (commutative forms)
+[[nodiscard]] inline Signal operator*(float v, const Signal& s) {
+  return s * v;
+}
+
+[[nodiscard]] inline Signal operator+(float v, const Signal& s) {
+  return s + v;
+}
+
+[[nodiscard]] inline Signal operator-(float v, const Signal& s) {
+  return Signal(v) - s;
+}
 
 }  // namespace automata
