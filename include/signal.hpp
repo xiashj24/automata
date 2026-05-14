@@ -1,7 +1,9 @@
 #pragma once
-#include <span>
 #include <functional>
-#include <algorithm>
+#include <initializer_list>
+#include <memory>
+#include <span>
+#include <vector>
 
 #include <euclid.hpp>
 
@@ -15,109 +17,63 @@
 // impulse → step → delay → scale/add → difference → convolution → accumulator →
 // feedback → FFT
 
-// TODO: construct signal from samples (fir)
+// TODO: construct signal from a span of samples (fir)
 
-// should you use unsigned int for index and argument
+// should you use unsigned int for index and argument?
 
 namespace automata {
 
 class Signal {
   using Func = std::function<float(int)>;
-  // should you use std::shared_ptr?
-public:
-  explicit Signal(Func generate) : gen(std::move(generate)) {}
 
-  // evaluation
-  [[nodiscard]] float operator[](int i) const { return gen(i); }
+public:
+  explicit Signal(Func generate);
+  explicit Signal(float v);
+
+  explicit Signal(std::vector<float> samples);
+  Signal(std::initializer_list<float> samples);
+
+  [[nodiscard]] float operator[](int i) const;
 
   // fundamental signals
+  static Signal impulse();
+  static Signal step();
+  static Signal every(int period);   // impulse train
+  static Signal saw(int period);     // unipolar, does not reach 1.f
+  static Signal square(int period);  // unipolar
+  static Signal sin(int period);     // bipolar
 
-  // DC signal
-  explicit Signal(float v) : gen([v](int) { return v; }) {}
+  // TODO: construct a signal from a LUT of single cycle waveform
 
-  static Signal impulse() {
-    return Signal([](int i) { return (i == 0) ? 1.f : 0.f; });
-  }
-
-  static Signal step() {
-    return Signal([](int i) { return (i >= 0) ? 1.f : 0.f; });
-  }
-
-  // impulse train
-  static Signal every(int period) {
-    return Signal([period](int i) { return ((i % period) == 0) ? 1.f : 0.f; });
-  }
-
-  [[nodiscard]] Signal delay(int z) const {
-    return Signal([x = *this, z](int i) { return x[i - z]; });
-  }  // or, use z(-d)?, should you forbid minus delay?
-
-  [[nodiscard]] Signal convolve(const Signal& h) const {
-    // assume both are causal signals (0 for i < 0)
-    return Signal([x = *this, h](int n) {
-      float sum = 0.f;
-      for (int k = 0; k <= n; ++k)
-        sum += x[k] * h[n - k];
-      return sum;
-    });
-  }
+  [[nodiscard]] Signal delay(int z) const;
+  [[nodiscard]] Signal operator>>(const Signal& h) const;  // convolution
 
   // scale
-  [[nodiscard]] Signal operator*(float v) const {
-    return Signal([x = *this, v](int i) { return x[i] * v; });
-  }
-
-  [[nodiscard]] Signal operator/(float v) const {
-    return Signal([x = *this, v](int i) { return x[i] / v; });
-  }
+  [[nodiscard]] Signal operator*(float v) const;
+  [[nodiscard]] Signal operator/(float v) const;
 
   // DC offset
-  [[nodiscard]] Signal operator+(float v) const {
-    return Signal([x = *this, v](int i) { return x[i] + v; });
-  }
+  [[nodiscard]] Signal operator+(float v) const;
+  [[nodiscard]] Signal operator-(float v) const;
 
-  [[nodiscard]] Signal operator-(float v) const {
-    return Signal([x = *this, v](int i) { return x[i] - v; });
-  }
-
-  // render block of samples
-  void render(std::span<float> buf, int start = 0) {
-    std::generate(buf.begin(), buf.end(),
-                  [&, i = start]() mutable { return gen(i++); });
-  }
+  void render(std::span<float> buf, int start = 0);
 
 private:
-  Func gen;
+  std::shared_ptr<Func> gen;
 };
 
 // arithmetic
-[[nodiscard]] inline Signal operator+(const Signal& lhs, const Signal& rhs) {
-  return Signal([lhs, rhs](int i) { return lhs[i] + rhs[i]; });
-}
+[[nodiscard]] Signal operator+(const Signal& lhs, const Signal& rhs);
+[[nodiscard]] Signal operator-(const Signal& lhs, const Signal& rhs);
+[[nodiscard]] Signal operator*(const Signal& lhs, const Signal& rhs);
+[[nodiscard]] Signal operator/(const Signal& lhs, const Signal& rhs);
 
-[[nodiscard]] inline Signal operator-(const Signal& lhs, const Signal& rhs) {
-  return Signal([lhs, rhs](int i) { return lhs[i] - rhs[i]; });
-}
-
-[[nodiscard]] inline Signal operator*(const Signal& lhs, const Signal& rhs) {
-  return Signal([lhs, rhs](int i) { return lhs[i] * rhs[i]; });
-}
-
-[[nodiscard]] inline Signal operator/(const Signal& lhs, const Signal& rhs) {
-  return Signal([lhs, rhs](int i) { return lhs[i] / rhs[i]; });
-}
+// assume both are causal signals (0 for i < 0)
+[[nodiscard]] Signal convolve(const Signal& x, const Signal& h);
 
 // scalar arithmetic (commutative forms)
-[[nodiscard]] inline Signal operator*(float v, const Signal& s) {
-  return s * v;
-}
-
-[[nodiscard]] inline Signal operator+(float v, const Signal& s) {
-  return s + v;
-}
-
-[[nodiscard]] inline Signal operator-(float v, const Signal& s) {
-  return Signal(v) - s;
-}
+[[nodiscard]] Signal operator*(float v, const Signal& s);
+[[nodiscard]] Signal operator+(float v, const Signal& s);
+[[nodiscard]] Signal operator-(float v, const Signal& s);
 
 }  // namespace automata
