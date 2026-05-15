@@ -98,10 +98,10 @@ public:
 
 [[nodiscard]] inline Stream osc(Stream hz, Stream phase_mod = 0.f) {
   constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
-  return Stream(
-      [phase = phasor(std::move(hz) / SampleRate), phase_mod = std::move(phase_mod)]() mutable {
-        return std::sin(two_pi * (phase.next() + phase_mod.next()));
-      });
+  return Stream([phase = phasor(std::move(hz) / SampleRate),
+                 phase_mod = std::move(phase_mod)]() mutable {
+    return std::sin(two_pi * (phase.next() + phase_mod.next()));
+  });
 }
 
 template <typename T>
