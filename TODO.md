@@ -2,7 +2,7 @@
 - make the main loop
 - use a library for bmp image
 
-Enforce that system with memory evaluate in order
+signals constructed by filters are stateful, so you should probably make a new SequentialSignal type that does not allow random access.
 
 more primitives
 - shift register

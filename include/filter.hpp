@@ -48,4 +48,13 @@ struct BiquadState {
   });
 }
 
+// one pole lag filter - stateful, must evaluate sequentially
+[[nodiscard]] inline Signal lag(const Signal& x, float a, float& yz) {
+  return Signal([x, a = std::clamp(a, 0.f, 1.f), &yz](int n) {
+    float yn = (1.f - a) * x[n] + a * yz;
+    yz = yn;
+    return yn;
+  });
+}
+
 }  // namespace automata

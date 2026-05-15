@@ -1,5 +1,5 @@
 #include <signal.hpp>
-#include <biquad.hpp>
+#include <filter.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
