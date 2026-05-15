@@ -1,5 +1,7 @@
 #pragma once
 #include <algorithm>
+#include <cmath>
+#include <numbers>
 
 #include <stream.hpp>
 
@@ -59,6 +61,68 @@ struct BiquadState {
     yz = yn;
     return yn;
   });
+}
+
+struct SvfState {
+  float s1 = 0.f, s2 = 0.f;
+};
+
+namespace detail {
+
+enum class SvfMode { Lowpass, Bandpass, Highpass };
+
+// w = normalized frequency (f/fs). res in [0, 1): 0 = critically damped
+// (Q=0.5). Ref: The Art of VA Filter Design, Zavalishin.
+template <SvfMode Mode>
+[[nodiscard]] inline Stream svf_impl(Stream x,
+                                     Stream w,
+                                     Stream res,
+                                     SvfState& state) {
+  return Stream([x = std::move(x), w = std::move(w), res = std::move(res),
+                 &state]() mutable {
+    constexpr float pi = std::numbers::pi_v<float>;
+    const float wn = std::clamp(w.next(), 0.f, 0.4999f);
+    const float rn = std::clamp(res.next(), 0.f, 0.9999f);
+    const float g = std::tan(pi * wn);
+    const float r2 = 2.f * (1.f - rn);
+    const float h = 1.f / (1.f + r2 * g + g * g);
+    const float xn = x.next();
+    const float hp = h * (xn - state.s1 * (g + r2) - state.s2);
+    const float bp = hp * g + state.s1;
+    state.s1 = hp * g + bp;
+    const float lp = bp * g + state.s2;
+    state.s2 = bp * g + lp;
+    if constexpr (Mode == SvfMode::Lowpass)
+      return lp;
+    else if constexpr (Mode == SvfMode::Bandpass)
+      return bp;
+    else
+      return hp;
+  });
+}
+
+}  // namespace detail
+
+[[nodiscard]] inline Stream svf_lp(Stream x,
+                                   Stream cutoff,
+                                   Stream res,
+                                   SvfState& state) {
+  return detail::svf_impl<detail::SvfMode::Lowpass>(
+      std::move(x), std::move(cutoff), std::move(res), state);
+}
+[[nodiscard]] inline Stream svf_bp(Stream x,
+                                   Stream cutoff,
+                                   Stream res,
+                                   SvfState& state) {
+  return detail::svf_impl<detail::SvfMode::Bandpass>(
+      std::move(x), std::move(cutoff), std::move(res), state);
+}
+[[nodiscard]] inline Stream svf_hp(Stream x,
+                                   Stream cutoff,
+                                   Stream res,
+                                   SvfState& state) {
+  return detail::svf_impl<detail::SvfMode::Highpass>(
+      std::move(x), std::move(cutoff), std::move(res), state);
 }
 
 }  // namespace automata

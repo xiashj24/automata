@@ -11,7 +11,6 @@
 #include <stream.hpp>
 #include <filter.hpp>
 
-
 using namespace automata;
 
 namespace {
@@ -22,24 +21,31 @@ constexpr int frame_count = 256;
 float base_freq = 110.0f;  // hz
 float w = base_freq / static_cast<float>(sample_rate);
 float fm_index = 10.f;
-float fm_depth = 1.f;
+float fm_depth = 5.f;
 
-float exp_lfo_freq = 1.f;  // hz
-float w_lfo = exp_lfo_freq / static_cast<float>(sample_rate);
+float lfo_freq = 0.5f;  // hz
+float w_lfo = lfo_freq / static_cast<float>(sample_rate);
 
-float lag_state = 0.f;
+// float lag_state = 0.f;
+SvfState svf_state;
 
 // 2-op phase modulation
-auto lfo = phasor(w_lfo);
+auto lfo = osc(w_lfo);
 
 auto modulator = osc(w * fm_index);
 auto carrier = osc(w, modulator * fm_depth * lfo);
 
+auto sawtooth = saw(w);
+
 // lag(Stream x, Stream a, float& yz)
 
-auto lag_out = lag(carrier, lfo, lag_state);
+auto svf_out = svf_lp(
+    sawtooth,
+    (2000.f + lfo * 1800.f) / static_cast<float>(sample_rate),
+    0.9f,
+    svf_state);
 
-auto out = lag_out;
+auto out = svf_out * 0.2;
 
 void audio_callback(ma_device*,
                     void* output,
