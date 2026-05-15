@@ -1,6 +1,7 @@
 #include <signal.hpp>
 #include <filter.hpp>
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace automata;
@@ -108,10 +109,28 @@ TEST_CASE("biquad state is externally visible", "[signal][biquad]") {
   REQUIRE(state.s1 == 0.25f);
 }
 
+TEST_CASE("phasor", "[signal][create]") {
+  auto sig = Signal::phasor(0.25f);  // period = 4 samples
+  REQUIRE(sig[0] == 0.f);
+  REQUIRE(sig[1] == 0.25f);
+  REQUIRE(sig[2] == 0.5f);
+  REQUIRE(sig[3] == 0.75f);
+  REQUIRE(sig[4] == 0.f);  // wraps
+  REQUIRE(sig[8] == 0.f);  // wraps again
+}
+
+TEST_CASE("osc", "[signal][create]") {
+  auto sig = Signal::osc(0.25f);  // period = 4 samples
+  REQUIRE(sig[0] == Catch::Approx(0.f).margin(1e-6f));
+  REQUIRE(sig[1] == Catch::Approx(1.f));                // sin(π/2)
+  REQUIRE(sig[2] == Catch::Approx(0.f).margin(1e-6f));  // sin(π)
+  REQUIRE(sig[3] == Catch::Approx(-1.f));               // sin(3π/2)
+  REQUIRE(sig[4] == Catch::Approx(0.f).margin(1e-6f));  // wraps back to sin(2π)
+}
+
 TEST_CASE("lag with Signal-valued coefficient", "[signal][lag]") {
   float yz = 0.f;
-  // coefficient ramps from 0 to 1 — use a saw as a modulator
-  Signal coeff = Signal::saw(4);  // 0, 0.25, 0.5, 0.75, ...
+  Signal coeff = Signal::phasor(1.f / 4);  // 0, 0.25, 0.5, 0.75, ...
   auto sig = lag(1.f, coeff, yz);
   // n=0: ac=0   → yn = 1*1 + 0*0   = 1.0
   // n=1: ac=0.25 → yn = 0.75*1 + 0.25*1 = 1.0
@@ -138,7 +157,7 @@ TEST_CASE("lag filter", "[signal][lag]") {
 
 TEST_CASE("composed lag filters", "[signal][lag]") {
   float yz1 = 0.f, yz2 = 0.f;
-  // Two lag filters in series — SequentialSignal output feeds directly into
+  // Two lag filters in series — Signal::Stream output feeds directly into
   // next
   auto filtered = lag(lag(1.f, 0.5f, yz1), 0.5f, yz2);
   // Stage 1 output: 0.5, 0.75, 0.875, ...
@@ -149,11 +168,10 @@ TEST_CASE("composed lag filters", "[signal][lag]") {
   REQUIRE(filtered.next() == 0.5f);
 }
 
-TEST_CASE("SequentialSignal modulated by stateful signal", "[signal][lag]") {
+TEST_CASE("Signal::Stream modulated by stateful signal", "[signal][lag]") {
   float env_yz = 0.f, lag_yz = 0.f;
   // Slew-limited envelope (0→1 at rate 0.5/sample) modulates the lag coeff
-  auto filtered =
-      lag(1.f, slew(1.f, 0.5f, 0.5f, env_yz), lag_yz);
+  auto filtered = lag(1.f, slew(1.f, 0.5f, 0.5f, env_yz), lag_yz);
   // Envelope: n=0→0.5, n=1→1.0
   // n=0: ac=clamp(0.5)=0.5, yn = 0.5*1 + 0.5*0 = 0.5
   // n=1: ac=clamp(1.0)=1.0, yn = 0*1 + 1*0.5  = 0.5

@@ -11,15 +11,9 @@
  * @brief generic signal type
  * can represent triggers or audio signals, depending on the tick rate
  * the API is largely inspired by discrete time signal processing theory
+ * @todo construct periodic signal from LUT of single cycle waveform
+ * @note should you use unsigned int for index and argument?
  */
-
-// order of implementation
-// impulse → step → delay → scale/add → difference → convolution → accumulator →
-// feedback → FFT
-
-// TODO: construct signal from a span of samples (fir)
-
-// should you use unsigned int for index and argument?
 
 namespace automata {
 
@@ -28,8 +22,7 @@ class Signal {
 
 public:
   explicit Signal(Func generate);
-  // cppcheck-suppress noExplicitConstructor
-  Signal(float v);
+  explicit Signal(float v);
 
   explicit Signal(std::vector<float> samples);
   Signal(std::initializer_list<float> samples);
@@ -39,15 +32,20 @@ public:
   // fundamental signals
   static Signal impulse();
   static Signal step();
-  static Signal every(int period);   // impulse train
-  static Signal saw(int period);     // unipolar, does not reach 1.f
-  static Signal square(int period);  // unipolar
-  static Signal sin(int period);     // bipolar
+  static Signal every(int period);  // impulse train
 
-  // TODO: construct a signal from a LUT of single cycle waveform
+  // static Signal saw(int period);     // unipolar, does not reach 1.f
+  // static Signal square(int period);  // unipolar
+  // static Signal sin(int period);     // bipolar
 
+  static Signal phasor(float w);
+  static Signal osc(float w);
+
+  // z^-d
   [[nodiscard]] Signal delay(int z) const;
-  [[nodiscard]] Signal operator>>(const Signal& h) const;  // convolution
+
+  // alis for convolution
+  [[nodiscard]] Signal operator>>(const Signal& h) const;
 
   // scale
   [[nodiscard]] Signal operator*(float v) const;
@@ -72,7 +70,7 @@ private:
 // assume both are causal signals (0 for i < 0)
 [[nodiscard]] Signal convolve(const Signal& x, const Signal& h);
 
-// scalar arithmetic (commutative forms)
+// scalar arithmetic
 [[nodiscard]] Signal operator*(float v, const Signal& s);
 [[nodiscard]] Signal operator+(float v, const Signal& s);
 [[nodiscard]] Signal operator-(float v, const Signal& s);

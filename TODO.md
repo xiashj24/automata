@@ -7,3 +7,5 @@ more primitives
 - noise
 - sample and hold
 
+- accumulator → feedback → FFT
+

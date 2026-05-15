@@ -37,23 +37,34 @@ Signal Signal::every(int period) {
   return Signal([period](int i) { return ((i % period) == 0) ? 1.f : 0.f; });
 }
 
-Signal Signal::saw(int period) {
-  return Signal([period](int i) {
-    return static_cast<float>(i % period) / static_cast<float>(period);
-  });
-}
+// Signal Signal::saw(int period) {
+//   return Signal([period](int i) {
+//     return static_cast<float>(i % period) / static_cast<float>(period);
+//   });
+// }
 
-Signal Signal::square(int period) {
+// Signal Signal::square(int period) {
+//   return Signal(
+//       [period](int i) { return (i % period) < (period / 2) ? 1.f : 0.f; });
+// }
+
+// Signal Signal::sin(int period) {
+//   return Signal([period](int i) {
+//     constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
+//     return std::sin(two_pi * static_cast<float>(i) /
+//                     static_cast<float>(period));
+//   });
+// }
+
+Signal Signal::phasor(float w) {
   return Signal(
-      [period](int i) { return (i % period) < (period / 2) ? 1.f : 0.f; });
+      [w](int i) { return std::fmod(w * static_cast<float>(i), 1.f); });
 }
 
-Signal Signal::sin(int period) {
-  return Signal([period](int i) {
-    constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
-    return std::sin(two_pi * static_cast<float>(i) /
-                    static_cast<float>(period));
-  });
+Signal Signal::osc(float w) {
+  constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
+  Signal phase = phasor(w);
+  return Signal([phase, two_pi](int i) { return std::sin(two_pi * phase[i]); });
 }
 
 Signal Signal::delay(int z) const {

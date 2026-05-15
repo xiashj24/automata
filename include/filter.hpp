@@ -1,7 +1,7 @@
 #pragma once
 #include <algorithm>
 
-#include <sequential_signal.hpp>
+#include <stream.hpp>
 
 /**
  * @brief Transposed Direct Form 2 biquad
@@ -10,11 +10,9 @@
 
 namespace automata {
 
-// Coefficients are SequentialSignal so they can be modulated per sample.
-// Pass a float or Signal where a constant is needed — both convert implicitly.
 struct BiquadCoeffs {
-  SequentialSignal a0 = 1.f, a1 = 0.f, a2 = 0.f;
-  SequentialSignal b1 = 0.f, b2 = 0.f;
+  float a0 = 1.f, a1 = 0.f, a2 = 0.f;
+  float b1 = 0.f, b2 = 0.f;
 };
 
 // TODO: make specialized version of the biquad coeffs
@@ -26,31 +24,25 @@ struct BiquadState {
 };
 
 // transposed direct form II
-[[nodiscard]] inline SequentialSignal biquad(SequentialSignal x,
-                                             BiquadCoeffs coeffs,
-                                             BiquadState& state) {
-  return SequentialSignal(
-      [x = std::move(x), coeffs = std::move(coeffs), &state]() mutable {
-        float xn = x.next();
-        float a0 = coeffs.a0.next();
-        float a1 = coeffs.a1.next();
-        float a2 = coeffs.a2.next();
-        float b1 = coeffs.b1.next();
-        float b2 = coeffs.b2.next();
-        float yn = a0 * xn + state.s1;
-        state.s1 = a1 * xn - b1 * yn + state.s2;
-        state.s2 = a2 * xn - b2 * yn;
-        return yn;
-      });
+[[nodiscard]] inline Stream biquad(Stream x,
+                                   BiquadCoeffs coeffs,
+                                   BiquadState& state) {
+  return Stream([x = std::move(x), coeffs, &state]() mutable {
+    const float xn = x.next();
+    const float yn = coeffs.a0 * xn + state.s1;
+    state.s1 = coeffs.a1 * xn - coeffs.b1 * yn + state.s2;
+    state.s2 = coeffs.a2 * xn - coeffs.b2 * yn;
+    return yn;
+  });
 }
 
 // rise/fall are max change per sample
-[[nodiscard]] inline SequentialSignal slew(SequentialSignal x,
-                                           SequentialSignal rise,
-                                           SequentialSignal fall,
-                                           float& yz) {
-  return SequentialSignal([x = std::move(x), rise = std::move(rise),
-                           fall = std::move(fall), &yz]() mutable {
+[[nodiscard]] inline Stream slew(Stream x,
+                                 Stream rise,
+                                 Stream fall,
+                                 float& yz) {
+  return Stream([x = std::move(x), rise = std::move(rise),
+                 fall = std::move(fall), &yz]() mutable {
     float xn = x.next();
     float rn = rise.next();
     float fn = fall.next();
@@ -61,10 +53,8 @@ struct BiquadState {
 }
 
 // one pole lag filter
-[[nodiscard]] inline SequentialSignal lag(SequentialSignal x,
-                                          SequentialSignal a,
-                                          float& yz) {
-  return SequentialSignal([x = std::move(x), a = std::move(a), &yz]() mutable {
+[[nodiscard]] inline Stream lag(Stream x, Stream a, float& yz) {
+  return Stream([x = std::move(x), a = std::move(a), &yz]() mutable {
     float ac = std::clamp(a.next(), 0.f, 1.f);
     float xn = x.next();
     float yn = (1.f - ac) * xn + ac * yz;
