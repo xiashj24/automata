@@ -25,7 +25,8 @@ public:
   Stream(const Signal& sig, int start = 0)
       : gen([sig, n = start]() mutable { return sig[n++]; }) {}
   // cppcheck-suppress noExplicitConstructor
-  Stream(float v) : gen([v]() { return v; }) {}
+  Stream(float&& v) : gen([v]() { return v; }) {}
+  explicit Stream(float* ptr) : gen([ptr]() { return *ptr; }) {}
 
   float next() { return gen(); }
 

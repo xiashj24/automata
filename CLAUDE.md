@@ -5,8 +5,6 @@ cmake --build build/develop
 ctest --test-dir build/develop --output-on-failure
 ```
 
-note to Claude: avoid Bash on Windows and use Powershell
-
 ## misc
 
 - don't use single short variable names unless it's conventional, e.g. x, y, z
