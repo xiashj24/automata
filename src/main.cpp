@@ -11,15 +11,15 @@
 #include <stream.hpp>
 #include <filter.hpp>
 
-using automata::osc;
-using automata::Stream;
+
+using namespace automata;
 
 namespace {
 
 constexpr int sample_rate = 48000;
 constexpr int frame_count = 256;
 
-float base_freq = 440.0f;  // hz
+float base_freq = 110.0f;  // hz
 float w = base_freq / static_cast<float>(sample_rate);
 float fm_index = 10.f;
 float fm_depth = 1.f;
@@ -30,14 +30,14 @@ float w_lfo = exp_lfo_freq / static_cast<float>(sample_rate);
 float lag_state = 0.f;
 
 // 2-op phase modulation
-auto lfo = osc(w_lfo);
+auto lfo = phasor(w_lfo);
 
 auto modulator = osc(w * fm_index);
 auto carrier = osc(w, modulator * fm_depth * lfo);
 
 // lag(Stream x, Stream a, float& yz)
 
-auto lag_out = lag(carrier, (lfo + 1.f) * 0.5f, lag_state);
+auto lag_out = lag(carrier, lfo, lag_state);
 
 auto out = lag_out;
 

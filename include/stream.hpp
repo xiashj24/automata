@@ -103,4 +103,18 @@ public:
       });
 }
 
+template <typename T>
+T to_bipolar(T uni) {
+  return uni * 2.f - 1.f;
+}
+
+template <typename T>
+T to_unipolar(T bi) {
+  return (bi + 1.f) * 0.5f;
+}
+
+[[nodiscard]] inline Stream saw(Stream w) {
+  return to_bipolar(phasor(w));
+}
+
 }  // namespace automata
