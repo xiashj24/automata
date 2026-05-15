@@ -3,6 +3,7 @@
 #include <cmath>
 #include <numbers>
 
+#include <samplerate.hpp>
 #include <stream.hpp>
 
 namespace automata {
@@ -71,19 +72,19 @@ namespace detail {
 
 enum class SvfMode { Lowpass, Bandpass, Highpass };
 
-// w = normalized frequency (f/fs). res in [0, 1): 0 = critically damped
-// (Q=0.5). Ref: The Art of VA Filter Design, Zavalishin.
+// cutoff in Hz. res in [0, 1): 0 = critically damped (Q=0.5).
+// Ref: The Art of VA Filter Design, Zavalishin.
 template <SvfMode Mode>
 [[nodiscard]] inline Stream svf_impl(Stream x,
-                                     Stream w,
+                                     Stream cutoff,
                                      Stream res,
                                      SvfState& state) {
-  return Stream([x = std::move(x), w = std::move(w), res = std::move(res),
-                 &state]() mutable {
+  return Stream([x = std::move(x), cutoff = std::move(cutoff),
+                 res = std::move(res), &state]() mutable {
     constexpr float pi = std::numbers::pi_v<float>;
-    const float wn = std::clamp(w.next(), 0.f, 0.4999f);
+    const float hz = std::clamp(cutoff.next(), 0.f, SampleRate * 0.4999f);
     const float rn = std::clamp(res.next(), 0.f, 0.9999f);
-    const float g = std::tan(pi * wn);
+    const float g = std::tan(pi * hz / SampleRate);
     const float r2 = 2.f * (1.f - rn);
     const float h = 1.f / (1.f + r2 * g + g * g);
     const float xn = x.next();

@@ -44,7 +44,7 @@ public:
   // z^-d
   [[nodiscard]] Signal delay(int z) const;
 
-  // alis for convolution
+  // alias for convolution
   [[nodiscard]] Signal operator>>(const Signal& h) const;
 
   // scale

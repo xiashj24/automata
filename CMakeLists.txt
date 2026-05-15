@@ -92,7 +92,7 @@ target_link_libraries(automata-render PRIVATE automata::automata)
 target_include_directories(automata-render PRIVATE src)
 target_compile_definitions(automata-render PRIVATE AUTOMATA_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_executable(automata-audio src/main.cpp)
+add_executable(automata-audio src/main.cpp src/graph.cpp)
 target_link_libraries(automata-audio PRIVATE automata::automata miniaudio)
 
 if(AUTOMATA_BUILD_TESTS)

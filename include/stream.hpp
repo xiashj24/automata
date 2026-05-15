@@ -6,6 +6,7 @@
 #include <numbers>
 #include <span>
 
+#include <samplerate.hpp>
 #include <signal.hpp>
 
 namespace automata {
@@ -95,10 +96,10 @@ public:
 
 // TODO: make a function called osc_sin take takes phase in 0-1
 
-[[nodiscard]] inline Stream osc(Stream w, Stream phase_mod = 0.f) {
+[[nodiscard]] inline Stream osc(Stream hz, Stream phase_mod = 0.f) {
   constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
   return Stream(
-      [phase = phasor(w), phase_mod = std::move(phase_mod)]() mutable {
+      [phase = phasor(std::move(hz) / SampleRate), phase_mod = std::move(phase_mod)]() mutable {
         return std::sin(two_pi * (phase.next() + phase_mod.next()));
       });
 }
@@ -113,8 +114,8 @@ T to_unipolar(T bi) {
   return (bi + 1.f) * 0.5f;
 }
 
-[[nodiscard]] inline Stream saw(Stream w) {
-  return to_bipolar(phasor(w));
+[[nodiscard]] inline Stream saw(Stream hz) {
+  return to_bipolar(phasor(std::move(hz) / SampleRate));
 }
 
 }  // namespace automata
