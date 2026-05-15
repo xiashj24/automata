@@ -1,129 +1,79 @@
-#include <algorithm>
-#include <fstream>
+#include <atomic>
+#include <cstdlib>
 #include <iostream>
-#include <iterator>
-#include <optional>
-#include <regex>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include <print>
+#include <span>
 
-#include "compiler.hpp"
-#include "harness_template.hpp"
-#include "image.hpp"
-#include "renderer.hpp"
+#define MA_IMPLEMENTATION
+#include <miniaudio.h>
 
-#ifndef AUTOMATA_INCLUDE_DIR
-#error "AUTOMATA_INCLUDE_DIR must be defined by CMake"
-#endif
+#include <signal.hpp>
+#include <stream.hpp>
+#include <filter.hpp>
 
-static std::optional<std::string> read_file(const char* path) {
-  std::ifstream file(path);
-  if (!file)
-    return std::nullopt;
-  return std::string{std::istreambuf_iterator<char>(file),
-                     std::istreambuf_iterator<char>()};
+using automata::osc;
+using automata::Stream;
+
+namespace {
+
+constexpr int sample_rate = 48000;
+constexpr int frame_count = 256;
+
+float base_freq = 440.0f;  // hz
+float w = base_freq / static_cast<float>(sample_rate);
+float fm_index = 10.f;
+float fm_depth = 1.f;
+
+float exp_lfo_freq = 1.f;  // hz
+float w_lfo = exp_lfo_freq / static_cast<float>(sample_rate);
+
+float lag_state = 0.f;
+
+// 2-op phase modulation
+auto lfo = osc(w_lfo);
+
+auto modulator = osc(w * fm_index);
+auto carrier = osc(w, modulator * fm_depth * lfo);
+
+// lag(Stream x, Stream a, float& yz)
+
+auto lag_out = lag(carrier, (lfo + 1.f) * 0.5f, lag_state);
+
+auto out = lag_out;
+
+void audio_callback(ma_device*,
+                    void* output,
+                    [[maybe_unused]] const void* input,
+                    ma_uint32 frames) {
+  auto* buf = static_cast<float*>(output);
+  out.render({buf, frames});
 }
 
-// Returns true if the source defines a tracks() function.
-static bool has_tracks_fn(std::string_view source) {
-  const std::regex pattern{
-      R"((?:constexpr\s+|inline\s+)*auto\s+tracks\s*\(\s*\))"};
-  return std::regex_search(source.data(), source.data() + source.size(),
-                           pattern);
-}
+}  // namespace
 
-// Finds all track_ function definitions in source order, deduplicated.
-static std::vector<std::string> scan_track_fns(std::string_view source) {
-  const std::regex pattern{
-      R"((?:constexpr\s+|inline\s+)*auto\s+(track_[a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*\))"};
-  std::vector<std::string> names;
-  const auto begin = std::cregex_iterator(
-      source.data(), source.data() + source.size(), pattern);
-  for (auto it = begin; it != std::cregex_iterator{}; ++it) {
-    std::string name = (*it)[1].str();
-    if (std::ranges::find(names, name) == names.end())
-      names.push_back(std::move(name));
-  }
-  return names;
-}
+int main() {
+  ma_device_config config = ma_device_config_init(ma_device_type_playback);
+  config.playback.format = ma_format_f32;
+  config.playback.channels = 1;
+  config.sampleRate = sample_rate;
+  config.periodSizeInFrames = frame_count;
+  config.dataCallback = audio_callback;
 
-static std::string build_harness(std::string_view user_code,
-                                 std::string_view main_body) {
-  std::string source{automata::harness_template};
-
-  const std::string user_ph = "{USER_CODE}";
-  source.replace(source.find(user_ph), user_ph.size(), user_code);
-
-  const std::string body_ph = "{MAIN_BODY}";
-  source.replace(source.find(body_ph), body_ph.size(), main_body);
-
-  return source;
-}
-
-int main(int argc, char* argv[]) {
-  if (argc < 2 || argc > 3) {
-    std::cerr << "Usage: automata-render <input.rhythm> [output.ppm]\n";
-    return 1;
+  ma_device device;
+  if (ma_device_init(nullptr, &config, &device) != MA_SUCCESS) {
+    std::println(stderr, "Failed to initialize playback device.");
+    return EXIT_FAILURE;
   }
 
-  const std::string input_path = argv[1];
-  const std::string output_path = [&] {
-    if (argc == 3)
-      return std::string{argv[2]};
-    const auto dot = input_path.rfind('.');
-    const std::string stem =
-        dot == std::string::npos ? input_path : input_path.substr(0, dot);
-    return stem + ".bmp";
-  }();
-
-  const auto user_code = read_file(input_path.c_str());
-  if (!user_code) {
-    std::cerr << "automata-render: cannot open '" << input_path << "'\n";
-    return 1;
+  if (ma_device_start(&device) != MA_SUCCESS) {
+    ma_device_uninit(&device);
+    std::println(stderr, "Failed to start playback device.");
+    return EXIT_FAILURE;
   }
 
-  std::string main_body;
-  if (has_tracks_fn(*user_code)) {
-    main_body =
-        "    std::apply([](const auto&... rhythms) {\n"
-        "        (emit(rhythms), ...);\n"
-        "    }, tracks());\n";
-  } else {
-    const auto names = scan_track_fns(*user_code);
-    if (names.empty()) {
-      std::cerr << "automata-render: define tracks() or track_* functions"
-                   " in '"
-                << input_path << "'\n";
-      return 1;
-    }
-    for (const auto& name : names)
-      main_body += "    emit(" + name + "());\n";
-  }
+  std::println("Press Enter to stop.");
+  std::cin.get();
 
-  const std::string harness_src = build_harness(*user_code, main_body);
-  const automata::HarnessResult result =
-      automata::run_harness(harness_src, AUTOMATA_INCLUDE_DIR);
-
-  if (!result.success) {
-    std::cerr << "automata-render: compile/run error:\n"
-              << result.error_output << "\n";
-    return 1;
-  }
-
-  const automata::RenderConfig cfg;
-  const automata::RenderOutput output =
-      automata::render(result.rhythm_bits_list, cfg);
-
-  std::ofstream ppm_file(output_path, std::ios::binary);
-  if (!ppm_file) {
-    std::cerr << "automata-render: cannot write '" << output_path << "'\n";
-    return 1;
-  }
-  automata::write_bmp(ppm_file, output.pixels, output.width, output.height);
-
-  std::cout << result.rhythm_bits_list.size() << " track(s) (" << output.width
-            << "x" << output.height << " px) -> " << output_path << "\n";
-  return 0;
+  ma_device_uninit(&device);
+  return EXIT_SUCCESS;
 }

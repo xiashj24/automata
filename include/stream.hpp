@@ -95,7 +95,7 @@ public:
 
 // TODO: make a function called osc_sin take takes phase in 0-1
 
-[[nodiscard]] inline Stream osc(float w, Stream phase_mod = 0.f) {
+[[nodiscard]] inline Stream osc(Stream w, Stream phase_mod = 0.f) {
   constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
   return Stream(
       [phase = phasor(w), phase_mod = std::move(phase_mod)]() mutable {

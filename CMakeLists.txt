@@ -34,6 +34,16 @@ cpmaddpackage(
   SYSTEM
   YES)
 
+cpmaddpackage(
+  NAME
+  miniaudio
+  GITHUB_REPOSITORY
+  mackron/miniaudio
+  GIT_TAG
+  0.11.25
+  SYSTEM
+  YES)
+
 # MARK: library interface
 add_library(automata STATIC src/signal.cpp)
 add_library(automata::automata ALIAS automata)
@@ -77,10 +87,13 @@ endif()
 include(CTest)
 
 # MARK: automata-render executable
-add_executable(automata-render src/main.cpp)
+add_executable(automata-render src/automata_render.cpp)
 target_link_libraries(automata-render PRIVATE automata::automata)
 target_include_directories(automata-render PRIVATE src)
 target_compile_definitions(automata-render PRIVATE AUTOMATA_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+add_executable(automata-audio src/main.cpp)
+target_link_libraries(automata-audio PRIVATE automata::automata miniaudio)
 
 if(AUTOMATA_BUILD_TESTS)
   message(STATUS "Building Tests.")

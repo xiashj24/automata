@@ -3,11 +3,6 @@
 
 #include <stream.hpp>
 
-/**
- * @brief Transposed Direct Form 2 biquad
- * @ref https://www.earlevel.com/main/2003/02/28/biquads/
- */
-
 namespace automata {
 
 struct BiquadCoeffs {
@@ -23,7 +18,10 @@ struct BiquadState {
   float s1 = 0.f, s2 = 0.f;
 };
 
-// transposed direct form II
+/**
+ * @brief Transposed Direct Form 2 biquad
+ * @ref https://www.earlevel.com/main/2003/02/28/biquads/
+ */
 [[nodiscard]] inline Stream biquad(Stream x,
                                    BiquadCoeffs coeffs,
                                    BiquadState& state) {

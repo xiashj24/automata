@@ -98,15 +98,14 @@
     {
       "name": "develop",
       "inherits": [
-        "ninja-multi-asan",
-        "llvm-clang"
+        "ninja-multi"
       ],
       "hidden": false,
       "cacheVariables": {
         "AUTOMATA_ENABLE_CACHE": "ON",
         "AUTOMATA_BUILD_TESTS": "ON",
         "AUTOMATA_WARNINGS_AS_ERRORS": "ON",
-        "AUTOMATA_ENABLE_CLANG_TIDY": "ON",
+        "AUTOMATA_ENABLE_CLANG_TIDY": "OFF",
         "AUTOMATA_ENABLE_CPPCHECK": "ON",
         "AUTOMATA_ENABLE_CPPLINT": "ON",
         "AUTOMATA_ENABLE_INCLUDE_WHAT_YOU_USE": "OFF",
