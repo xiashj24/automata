@@ -143,3 +143,6 @@ These building blocks corresponds to different abstractions in a functional appr
 - Music Thing Modular Turing Machine with expanders
 - Joranalogue Select 2
 - Neutral Labs LUNA
+- [Jolin Chrono](https://github.com/sitar93/krono)
+
+- early modular synthesizers: Moog System 15, buchla, are essentially composition systems
