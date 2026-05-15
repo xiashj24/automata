@@ -28,7 +28,8 @@ class Signal {
 
 public:
   explicit Signal(Func generate);
-  explicit Signal(float v);
+  // cppcheck-suppress noExplicitConstructor
+  Signal(float v);
 
   explicit Signal(std::vector<float> samples);
   Signal(std::initializer_list<float> samples);

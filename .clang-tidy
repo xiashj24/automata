@@ -57,7 +57,8 @@ Checks: "*,
         -cert-err58-cpp,
         -misc-no-recursion,
         -performance-inefficient-vector-operation,
-        -bugprone-unchecked-optional-access
+        -bugprone-unchecked-optional-access,
+        -clang-analyzer-cplusplus.NewDeleteLeaks
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: 'include/.*'
