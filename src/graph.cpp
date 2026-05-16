@@ -43,4 +43,10 @@ void render(std::span<float> buf) {
   out.render(buf);
 }
 
+// TODO: another function for plotting
+// void plot(std::span<float> buf) {
+//   carrier.render(buf); // is it ok to render a intermediate signal
+// }
+
+
 }  // namespace automata
