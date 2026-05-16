@@ -16,4 +16,5 @@
 - tweak parameters by slider
     - imgui SliderFloat <-> local float -> Stream (next() just return the bounded float value)
     - thread safety?
+- figure out how to do jit
 

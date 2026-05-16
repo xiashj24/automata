@@ -24,7 +24,9 @@ float slew_state;
 auto lfo = osc(lfo_freq);
 auto lfo_res = osc(lfo_res_freq).to_unipolar();
 
-auto rhythmic_modulation = slew(metro(&tempo), 1.f, 0.001f, slew_state);
+auto real_tempo = Stream(&tempo) + osc(0.1_hz) * 40_hz;
+
+auto rhythmic_modulation = slew(metro(real_tempo), 1.f, 0.001f, slew_state);
 
 // auto noise_out = noise(1) * 100.f;
 
@@ -37,7 +39,9 @@ auto svf_out =
 
 SvfState svf_state_2;
 
-auto noise_bpf = svf_bp(noise(1), osc(0.5f) * 200.f + 500.f, 0.5f, svf_state_2);
+auto bpf_cutoff = osc(0.5_hz) * 200_hz + 500_hz;
+
+auto noise_bpf = svf_bp(noise(), bpf_cutoff, 0.5f, svf_state_2);
 // auto out = svf_out * modulator * amp;
 auto out = carrier + noise_bpf;
 
