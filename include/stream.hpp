@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <functional>
+#include <limits>
 #include <numbers>
 #include <span>
 
@@ -13,7 +15,6 @@ namespace automata {
 
 /**
  * @brief sequential stream of samples
- * @todo noise generator and rng (with seeding)
  */
 class Stream {
   using Func = std::function<float()>;
@@ -25,13 +26,22 @@ public:
   Stream(const Signal& sig, int start = 0)
       : gen([sig, n = start]() mutable { return sig[n++]; }) {}
   // cppcheck-suppress noExplicitConstructor
-  Stream(float&& v) : gen([v]() { return v; }) {}
-  explicit Stream(float* ptr) : gen([ptr]() { return *ptr; }) {}
+  Stream(float v) : gen([v]() { return v; }) {}
+  // cppcheck-suppress noExplicitConstructor
+  Stream(float* ptr) : gen([ptr]() { return *ptr; }) {}
+  Stream(std::nullptr_t) = delete;
 
   float next() { return gen(); }
 
   void render(std::span<float> buf) {
     std::generate(buf.begin(), buf.end(), [this] { return next(); });
+  }
+
+  [[nodiscard]] Stream to_bipolar() {
+    return Stream([g = std::move(gen)]() { return g() * 2.f - 1.f; });
+  }
+  [[nodiscard]] Stream to_unipolar() {
+    return Stream([g = std::move(gen)]() { return (g() + 1.f) * 0.5f; });
   }
 };
 
@@ -105,18 +115,25 @@ public:
   });
 }
 
-template <typename T>
-T to_bipolar(T uni) {
-  return uni * 2.f - 1.f;
-}
-
-template <typename T>
-T to_unipolar(T bi) {
-  return (bi + 1.f) * 0.5f;
-}
-
 [[nodiscard]] inline Stream saw(Stream hz) {
-  return to_bipolar(phasor(std::move(hz) / SampleRate));
+  return phasor(std::move(hz) / SampleRate).to_bipolar();
+}
+
+// MusicDSP LCG (Hal Chamberlain / Phil Burk). Output: float in [0, max).
+// maybe rethink Stream<int> ?
+[[nodiscard]] inline Stream rand(uint32_t max, uint32_t seed = 1u) {
+  constexpr uint32_t multiplier = 196314165u;
+  constexpr uint32_t addend = 907633515u;
+  return Stream([state = seed, max]() mutable -> float {
+    state = state * multiplier + addend;
+    return static_cast<float>((static_cast<uint64_t>(state) * max) >> 32);
+  });
+}
+
+// White noise in (-1, 1).
+[[nodiscard]] inline Stream noise(uint32_t seed = 1u) {
+  constexpr float denom = static_cast<float>(std::numeric_limits<uint32_t>::max());
+  return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom).to_bipolar();
 }
 
 }  // namespace automata
