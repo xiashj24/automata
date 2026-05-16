@@ -18,15 +18,12 @@ constexpr float cutoff_mod_depth = 1800.f;
 
 float tempo = 130_bpm;
 
-SvfState svf_state;
-float slew_state;
-
 auto lfo = osc(lfo_freq);
 auto lfo_res = osc(lfo_res_freq).to_unipolar();
 
 auto real_tempo = Stream(&tempo) + osc(0.1_hz) * 40_hz;
 
-auto rhythmic_modulation = slew(metro(real_tempo), 1.f, 0.001f, slew_state);
+auto rhythmic_modulation = slew(metro(real_tempo), 1.f, 0.001f);
 
 // auto noise_out = noise(1) * 100.f;
 
@@ -34,14 +31,11 @@ auto modulator = osc(base_freq * fm_index * (1 + rhythmic_modulation));
 auto carrier = osc(base_freq, modulator * fm_depth * rhythmic_modulation);
 auto sawtooth = saw(base_freq);
 
-auto svf_out =
-    svf_lp(sawtooth, cutoff + lfo * cutoff_mod_depth, lfo_res, svf_state);
-
-SvfState svf_state_2;
+auto svf_out = svf_lp(sawtooth, cutoff + lfo * cutoff_mod_depth, lfo_res);
 
 auto bpf_cutoff = osc(0.5_hz) * 200_hz + 500_hz;
 
-auto noise_bpf = svf_bp(noise(), bpf_cutoff, 0.5f, svf_state_2);
+auto noise_bpf = svf_bp(noise(), bpf_cutoff, 0.5f);
 // auto out = svf_out * modulator * amp;
 auto out = carrier + noise_bpf;
 
