@@ -46,6 +46,9 @@ public:
   [[nodiscard]] Stream exp2() {
     return Stream([g = std::move(gen)]() { return std::exp2(g()); });
   }
+  [[nodiscard]] Stream vpow(float n) {
+    return Stream([g = std::move(gen), n]() mutable { return std::pow(g(), n); });
+  }
 };
 
 // stream-stream arithmetic
@@ -209,6 +212,71 @@ public:
   return Stream([x = std::move(x)]() mutable -> float {
     float xn = x.next();
     return xn / (1.f + std::abs(xn));
+  });
+}
+
+// Triangle oscillator: linear ramp -1→+1→-1 per cycle.
+[[nodiscard]] inline Stream tri(Stream hz) {
+  return Stream(
+      [ph = phasor(std::move(hz) / SampleRate)]() mutable -> float {
+        float p = ph.next();
+        return p < 0.5f ? 4.f * p - 1.f : 3.f - 4.f * p;
+      });
+}
+
+// Square oscillator: +1 for first `width` of period, -1 otherwise.
+[[nodiscard]] inline Stream sqr(Stream hz, Stream width = 0.5f) {
+  return Stream(
+      [ph = phasor(std::move(hz) / SampleRate),
+       width = std::move(width)]() mutable -> float {
+        return ph.next() < width.next() ? 1.f : -1.f;
+      });
+}
+
+// Random log-uniform value from [lo, hi] resampled on each trigger.
+[[nodiscard]] inline Stream rand_exp(float lo,
+                                     float hi,
+                                     Stream trigger,
+                                     uint32_t seed = 1u) {
+  constexpr uint32_t lcg_mul = 196314165u;
+  constexpr uint32_t lcg_add = 907633515u;
+  float log_lo = std::log(lo);
+  float log_range = std::log(hi / lo);
+  return Stream([trigger = std::move(trigger), log_lo, log_range,
+                 state = seed, value = lo]() mutable -> float {
+    if (trigger.next() > 0.5f) {
+      state = state * lcg_mul + lcg_add;
+      float t = static_cast<float>(state) / static_cast<float>(UINT32_MAX);
+      value = std::exp(log_lo + t * log_range);
+    }
+    return value;
+  });
+}
+
+// Map [in_lo, in_hi] linearly to [out_lo, out_hi] on a log scale.
+[[nodiscard]] inline Stream lin_exp(Stream src,
+                                    float in_lo,
+                                    float in_hi,
+                                    float out_lo,
+                                    float out_hi) {
+  float log_lo = std::log(out_lo);
+  float log_range = std::log(out_hi / out_lo);
+  float in_range = in_hi - in_lo;
+  return Stream([src = std::move(src), in_lo, in_range, log_lo,
+                 log_range]() mutable -> float {
+    float t = std::clamp((src.next() - in_lo) / in_range, 0.f, 1.f);
+    return std::exp(log_lo + t * log_range);
+  });
+}
+
+// Wrap values into [lo, hi) with modular arithmetic.
+[[nodiscard]] inline Stream wrap(Stream src, float lo, float hi) {
+  float range = hi - lo;
+  return Stream([src = std::move(src), lo, range]() mutable -> float {
+    float v = std::fmod(src.next() - lo, range);
+    if (v < 0.f)
+      v += range;
+    return lo + v;
   });
 }
 

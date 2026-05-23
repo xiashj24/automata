@@ -103,6 +103,22 @@ template <SvfMode Mode>
       std::move(x), std::move(cutoff), std::move(res));
 }
 
+// Non-interpolating delay line with no feedback.
+[[nodiscard]] inline Stream delay_n(Stream x, float delay_s) {
+  std::size_t delay_samples =
+      static_cast<std::size_t>(delay_s * SampleRate);
+  std::vector<float> buf(delay_samples + 1, 0.f);
+  return Stream([x = std::move(x), buf = std::move(buf),
+                 write_pos = std::size_t(0)]() mutable -> float {
+    std::size_t sz = buf.size();
+    std::size_t read_pos = (write_pos + 1u) % sz;
+    float delayed = buf[read_pos];
+    buf[write_pos] = x.next();
+    write_pos = (write_pos + 1u) % sz;
+    return delayed;
+  });
+}
+
 // Non-interpolating feedback comb filter. Matches SC's CombN.ar(in, delay, decay).
 // Feedback coefficient: exp(log(0.001) * delay / decay) — 60dB decay in `decay` seconds.
 // Buffer grows on first call and whenever delay_time increases.

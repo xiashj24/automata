@@ -12,17 +12,17 @@ inline constexpr int A440NoteNumber = 69;
 
 // TODO: make these constexpr
 
-inline float note_number_to_frequency(int note) {
+inline float note_to_frequency(int note) {
   return A440Frequency *
          std::pow(2.0f, (static_cast<float>(note) - A440NoteNumber) / 12.0f);
 }
 
-inline float note_number_to_frequency(float note) {
+inline float note_to_frequency(float note) {
   return A440Frequency *
          std::pow(2.0f, (note - static_cast<float>(A440NoteNumber)) / 12.0f);
 }
 
-inline float frequency_to_note_number(float frequency) {
+inline float frequency_to_note(float frequency) {
   return static_cast<float>(A440NoteNumber) +
          (12.0f / std::numbers::ln2_v<float>)*std::log(frequency /
                                                        A440Frequency);
@@ -48,7 +48,7 @@ struct NoteNumber {
   }
 
   [[nodiscard]] float frequency() const {
-    return note_number_to_frequency(static_cast<int>(note));
+    return note_to_frequency(static_cast<int>(note));
   }
 
   // Note name with flats for accidentals (e.g. "Eb", "Bb").
@@ -79,9 +79,9 @@ struct NoteNumber {
   [[nodiscard]] bool is_accidental() const { return !is_natural(); }
 };
 
-[[nodiscard]] inline automata::Stream note_number_to_frequency(
+[[nodiscard]] inline automata::Stream note_to_frequency(
     automata::Stream notes) {
   return automata::Stream([notes = std::move(notes)]() mutable -> float {
-    return note_number_to_frequency(notes.next());
+    return note_to_frequency(notes.next());
   });
 }

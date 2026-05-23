@@ -14,7 +14,7 @@ void audio_callback(ma_device*,
                     void* output,
                     [[maybe_unused]] const void* input,
                     ma_uint32 frames) {
-  automata::render({static_cast<float*>(output), frames});
+  render({static_cast<float*>(output), frames});
 }
 
 int main() {
