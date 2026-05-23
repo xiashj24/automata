@@ -43,6 +43,9 @@ public:
   [[nodiscard]] Stream to_unipolar() {
     return Stream([g = std::move(gen)]() { return (g() + 1.f) * 0.5f; });
   }
+  [[nodiscard]] Stream exp2() {
+    return Stream([g = std::move(gen)]() { return std::exp2(g()); });
+  }
 };
 
 // stream-stream arithmetic
@@ -132,8 +135,72 @@ public:
 
 // White noise in (-1, 1).
 [[nodiscard]] inline Stream noise(uint32_t seed = 1u) {
-  constexpr float denom = static_cast<float>(std::numeric_limits<uint32_t>::max());
-  return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom).to_bipolar();
+  constexpr float denom =
+      static_cast<float>(std::numeric_limits<uint32_t>::max());
+  return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom)
+      .to_bipolar();
+}
+
+// Stepped random noise in (-1, 1): new value drawn at `freq` Hz, held between
+// steps.
+[[nodiscard]] inline Stream lf_noise0(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq = std::move(freq), rng = noise(seed), current = 0.f,
+                 samples_left = 0]() mutable -> float {
+    if (samples_left <= 0) {
+      current = rng.next();
+      float hz = freq.next();
+      samples_left = static_cast<int>(SampleRate / std::max(hz, 0.001f));
+    }
+    --samples_left;
+    return current;
+  });
+}
+
+// Linear interpolation between random values drawn at `freq` Hz.
+[[nodiscard]] inline Stream lf_noise1(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq = std::move(freq), rng = noise(seed), start = 0.f,
+                 target = 0.f, samples_left = 0,
+                 period = 1]() mutable -> float {
+    if (samples_left <= 0) {
+      start = target;
+      target = rng.next();
+      float hz = freq.next();
+      period = std::max(static_cast<int>(SampleRate / std::max(hz, 0.001f)), 1);
+      samples_left = period;
+    }
+    float t =
+        static_cast<float>(period - samples_left) / static_cast<float>(period);
+    --samples_left;
+    return start + (target - start) * t;
+  });
+}
+
+// Smoothstep interpolation between random values drawn at `freq` Hz.
+[[nodiscard]] inline Stream lf_noise2(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq = std::move(freq), rng = noise(seed), start = 0.f,
+                 target = 0.f, samples_left = 0,
+                 period = 1]() mutable -> float {
+    if (samples_left <= 0) {
+      start = target;
+      target = rng.next();
+      float hz = freq.next();
+      period = std::max(static_cast<int>(SampleRate / std::max(hz, 0.001f)), 1);
+      samples_left = period;
+    }
+    float t =
+        static_cast<float>(period - samples_left) / static_cast<float>(period);
+    --samples_left;
+    float smooth_t = t * t * (3.f - 2.f * t);
+    return start + (target - start) * smooth_t;
+  });
+}
+
+// Soft saturator: x / (1 + |x|), maps R -> (-1, 1).
+[[nodiscard]] inline Stream distort(Stream x) {
+  return Stream([x = std::move(x)]() mutable -> float {
+    float xn = x.next();
+    return xn / (1.f + std::abs(xn));
+  });
 }
 
 }  // namespace automata

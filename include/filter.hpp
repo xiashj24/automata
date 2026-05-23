@@ -1,7 +1,9 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <numbers>
+#include <vector>
 
 #include <samplerate.hpp>
 #include <stream.hpp>
@@ -80,7 +82,7 @@ template <SvfMode Mode>
     if constexpr (Mode == SvfMode::Lowpass)
       return lp;
     else if constexpr (Mode == SvfMode::Bandpass)
-      return bp;
+      return bp * r2;  // normalize to unity peak gain (SVF BP peaks at Q = 1/r2)
     else
       return hp;
   });
@@ -99,6 +101,35 @@ template <SvfMode Mode>
 [[nodiscard]] inline Stream svf_hp(Stream x, Stream cutoff, Stream res) {
   return detail::svf_impl<detail::SvfMode::Highpass>(
       std::move(x), std::move(cutoff), std::move(res));
+}
+
+// Non-interpolating feedback comb filter. Matches SC's CombN.ar(in, delay, decay).
+// Feedback coefficient: exp(log(0.001) * delay / decay) — 60dB decay in `decay` seconds.
+// Buffer grows on first call and whenever delay_time increases.
+// State is held behind a shared_ptr so copies of the Stream share the same buffer.
+[[nodiscard]] inline Stream comb_n(Stream x, Stream delay_time, Stream decay_time) {
+  struct State {
+    std::vector<float> buf;
+    std::size_t write_pos = 0;
+  };
+  return Stream([x = std::move(x), delay_time = std::move(delay_time),
+                 decay_time = std::move(decay_time),
+                 state = std::make_shared<State>()]() mutable -> float {
+    float dt = std::max(delay_time.next(), 0.f);
+    float dcy = decay_time.next();
+    std::size_t delay_samples = static_cast<std::size_t>(dt * SampleRate);
+    std::size_t needed = delay_samples + 1;
+    if (needed > state->buf.size())
+      state->buf.resize(needed, 0.f);
+    float feedback = std::exp(std::log(0.001f) * dt / std::abs(dcy));
+    if (dcy < 0.f) feedback = -feedback;
+    std::size_t sz = state->buf.size();
+    std::size_t read_pos = (state->write_pos + sz - delay_samples) % sz;
+    float yn = x.next() + feedback * state->buf[read_pos];
+    state->buf[state->write_pos] = yn;
+    state->write_pos = (state->write_pos + 1) % sz;
+    return yn;
+  });
 }
 
 }  // namespace automata

@@ -1,52 +1,42 @@
 #include <graph.hpp>
 #include <filter.hpp>
+#include <io.hpp>
 #include <stream.hpp>
-#include <tempo.hpp>
 #include <units.hpp>
 
 namespace automata {
 using namespace literals;
 
-constexpr float base_freq = 110_hz;
-constexpr float fm_index = 2.f;
-constexpr float fm_depth = 5.f;
-constexpr float lfo_freq = 0.3_hz;
-constexpr float lfo_res_freq = 0.7_hz;
-constexpr float amp = 0.2f;
-constexpr float cutoff = 2_khz;
-constexpr float cutoff_mod_depth = 1800.f;
+// ported from https://supercollider.github.io/sc-140.html
+// {LocalOut.ar(a=CombN.ar(BPF.ar(LocalIn.ar(2)*7.5+Saw.ar([32,33],0.2),2**LFNoise0.kr(4/3,4)*300,0.1).distort,2,2,40));a}.play
+// it sounded completely different...
 
-float tempo = 130_bpm;
+// LocalIn.ar(2)
+auto in_signal = local_in();
 
-auto lfo = osc(lfo_freq);
-auto lfo_res = osc(lfo_res_freq).to_unipolar();
+// Saw.ar([32, 33], 0.2) — stereo detuned saws, mul=0.2, summed to mono
+auto saw_osc = (saw(32_hz) + saw(33_hz)) * 0.1f;
 
-auto real_tempo = Stream(&tempo) + osc(0.1_hz) * 40_hz;
+// mix = in * 7.5 + saw
+auto mix = in_signal * 7.5f + saw_osc;
 
-auto rhythmic_modulation = slew(metro(real_tempo), 1.f, 0.001f);
+// freq = 2 ** LFNoise0.kr(4/3, 4) * 300 → stepped random in [~19, ~4800] Hz
+auto freq = (lf_noise0(1.33_hz) * 4.f).exp2() * 300.f;
 
-// auto noise_out = noise(1) * 100.f;
+// BPF with rq=0.1: res = 1 - rq/2 = 0.95
+auto filtered = svf_bp(mix, freq, 0.9f);
 
-auto modulator = osc(base_freq * fm_index * (1 + rhythmic_modulation));
-auto carrier = osc(base_freq, modulator * fm_depth * rhythmic_modulation);
-auto sawtooth = saw(base_freq);
+// .distort
+auto clipped = distort(filtered);
 
-auto svf_out = svf_lp(sawtooth, cutoff + lfo * cutoff_mod_depth, lfo_res);
+// CombN.ar(bpf, 2, 2, 40)
+auto comb = comb_n(clipped, 2_s, 40_s);
 
-auto bpf_cutoff = osc(0.5_hz) * 200_hz + 500_hz;
-
-auto noise_bpf = svf_bp(noise(), bpf_cutoff, 0.5f);
-// auto out = svf_out * modulator * amp;
-auto out = carrier + noise_bpf;
+// LocalOut.ar(out)
+auto out = local_out(comb);
 
 void render(std::span<float> buf) {
   out.render(buf);
 }
-
-// TODO: another function for plotting
-// void plot(std::span<float> buf) {
-//   carrier.render(buf); // is it ok to render a intermediate signal
-// }
-
 
 }  // namespace automata

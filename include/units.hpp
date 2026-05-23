@@ -21,6 +21,12 @@ namespace literals {
 [[nodiscard]] constexpr float operator""_bpm(unsigned long long v) noexcept {
     return static_cast<float>(v);
 }
+[[nodiscard]] constexpr float operator""_s(unsigned long long v) noexcept {
+    return static_cast<float>(v);
+}
+[[nodiscard]] constexpr float operator""_ms(unsigned long long v) noexcept {
+    return static_cast<float>(v / 1000ULL);
+}
 
 }  // namespace literals
 }  // namespace automata
