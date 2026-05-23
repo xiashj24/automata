@@ -40,20 +40,27 @@ struct LSystemExpander {
           else
             run(depth - 1, pitch, stack);
           break;
-        case '+': ++pitch; break;
-        case '-': --pitch; break;
+        case '+':
+          ++pitch;
+          break;
+        case '-':
+          --pitch;
+          break;
         case '?':
           rng = lcg_next(rng);
           pitch += (rng & 1u) ? 1 : -1;
           break;
-        case '[': stack.push_back(pitch); break;
+        case '[':
+          stack.push_back(pitch);
+          break;
         case ']':
           if (!stack.empty()) {
             pitch = stack.back();
             stack.pop_back();
           }
           break;
-        default: break;
+        default:
+          break;
       }
     }
   }
@@ -74,7 +81,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
     i = (i + 1u) % vals.size();
     return v;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Pick a random value with replacement on each trigger pulse.
@@ -86,7 +93,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
         state = detail::lcg_next(state);
         return vals[detail::lcg_index(state, vals.size())];
       });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Pick a random value with no consecutive repeats.
@@ -103,7 +110,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
     last = idx;
     return vals[idx];
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Pick a random value according to (unnormalized) weights.
@@ -126,7 +133,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
     }
     return vals.back();
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Finite range cycling: start, start+step, …, up to (but not including) stop,
@@ -142,7 +149,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
       value = start;
     return out;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Arithmetic sequence: start, start+step, start+2·step, …
@@ -152,7 +159,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
     value += step;
     return out;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Geometric sequence: start, start·ratio, start·ratio², …
@@ -162,7 +169,7 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
     value *= ratio;
     return out;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Play values forward then backward, cycling: [a,b,c,d] → a,b,c,d,c,b,a,b,…
@@ -189,70 +196,76 @@ inline std::size_t lcg_index(uint32_t state, std::size_t n) {
         }
         return v;
       });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
-// A scale as semitone intervals from the root (up to 12 notes).
-struct Scale {
-  std::array<int, 12> intervals{};
-  int size = 0;
-
-  constexpr Scale(std::initializer_list<int> ints)
-      : size(static_cast<int>(ints.size())) {
-    auto it = ints.begin();
-    for (int i = 0; i < size; ++i)
-      intervals[static_cast<std::size_t>(i)] = *it++;
-  }
-
-  // Map a scale degree (0=root, negative = below root) to semitone offset.
-  [[nodiscard]] constexpr int semitones(int degree) const {
-    int octave = degree / size;
-    int idx = degree % size;
-    if (idx < 0) {
-      idx += size;
-      --octave;
-    }
-    return octave * 12 + intervals[static_cast<std::size_t>(idx)];
-  }
-
-  static const Scale major;
-  static const Scale minor;
-  static const Scale major_penta;
-  static const Scale minor_penta;
-  static const Scale hirajoshi;    // Japanese koto scale
-  static const Scale ritusen;      // Japanese pentatonic subset
-  static const Scale hex_major6;   // major hexatonic
+enum Scale {
+  major,
+  minor,
+  major_penta,
+  minor_penta,
+  hirajoshi,
+  ritusen,
+  hex_major6,
+  hex_minor,
 };
 
-inline constexpr Scale Scale::major{0, 2, 4, 5, 7, 9, 11};
-inline constexpr Scale Scale::minor{0, 2, 3, 5, 7, 8, 10};
-inline constexpr Scale Scale::major_penta{0, 2, 4, 7, 9};
-inline constexpr Scale Scale::minor_penta{0, 3, 5, 7, 10};
-inline constexpr Scale Scale::hirajoshi{0, 2, 3, 7, 8};
-inline constexpr Scale Scale::ritusen{0, 2, 7, 9};
-inline constexpr Scale Scale::hex_major6{0, 2, 4, 5, 7, 9};
+namespace detail {
 
-// Map a stream of scale degrees to semitone offsets (add a root note to get
-// MIDI note numbers).
-[[nodiscard]] inline Stream degree(Stream degrees, Scale scale) {
-  return Stream([degrees = std::move(degrees),
-                 scale = std::move(scale)]() mutable -> float {
+template <Scale S>
+constexpr auto scale_intervals() {
+  if constexpr (S == major)
+    return std::array{0, 2, 4, 5, 7, 9, 11};
+  else if constexpr (S == minor)
+    return std::array{0, 2, 3, 5, 7, 8, 10};
+  else if constexpr (S == major_penta)
+    return std::array{0, 2, 4, 7, 9};
+  else if constexpr (S == minor_penta)
+    return std::array{0, 3, 5, 7, 10};
+  else if constexpr (S == hirajoshi)
+    return std::array{0, 2, 3, 7, 8};
+  else if constexpr (S == ritusen)
+    return std::array{0, 2, 7, 9};
+  else if constexpr (S == hex_major6)
+    return std::array{0, 2, 4, 5, 7, 9};
+  else if constexpr (S == hex_minor)
+    return std::array{0, 2, 3, 7, 9, 11};
+}
+
+template <Scale S>
+constexpr int semitones(int d) {
+  constexpr auto ivs = scale_intervals<S>();
+  constexpr int sz = static_cast<int>(ivs.size());
+  int oct = d / sz;
+  int idx = d % sz;
+  if (idx < 0) {
+    idx += sz;
+    --oct;
+  }
+  return oct * 12 + ivs[static_cast<std::size_t>(idx)];
+}
+
+}  // namespace detail
+
+template <Scale S>
+[[nodiscard]] inline Stream scale(Stream degrees, Stream root = 0.f) {
+  return Stream([degrees, root]() mutable -> float {
     int d = static_cast<int>(std::round(degrees.next()));
-    return static_cast<float>(scale.semitones(d));
+    return static_cast<float>(detail::semitones<S>(d)) + root.next();
   });
 }
 
 // Euclidean rhythm: distributes `pulses` evenly across `steps`, returns 1/0.
 [[nodiscard]] inline Stream euclid(uint32_t pulses,
-                                      uint32_t steps,
-                                      Clock clock,
-                                      uint32_t rotation = 0u) {
+                                   uint32_t steps,
+                                   Clock clock,
+                                   uint32_t rotation = 0u) {
   auto raw = Stream([pulses, steps, rotation, i = 0u]() mutable -> float {
     float v = ::euclid(pulses, steps, rotation, i) ? 1.f : 0.f;
     i = (i + 1u) % steps;
     return v;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Shuffle values randomly on each cycle, then step through in that order.
@@ -275,7 +288,7 @@ inline constexpr Scale Scale::hex_major6{0, 2, 4, 5, 7, 9};
     i = (i + 1u) % vals.size();
     return v;
   });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // Generate all n! permutations of values in lexicographic order, flattened.
@@ -311,7 +324,7 @@ inline constexpr Scale Scale::hex_major6{0, 2, 4, 5, 7, 9};
           value = hi;
         return value;
       });
-  return hold(std::move(raw), clock.trigger());
+  return hold(raw, clock.trigger());
 }
 
 // L-system sequence: expand axiom recursively to `depth` levels, then cycle.

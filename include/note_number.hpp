@@ -81,7 +81,7 @@ struct NoteNumber {
 
 [[nodiscard]] inline automata::Stream note_to_frequency(
     automata::Stream notes) {
-  return automata::Stream([notes = std::move(notes)]() mutable -> float {
+  return automata::Stream([notes]() mutable -> float {
     return note_to_frequency(notes.next());
   });
 }

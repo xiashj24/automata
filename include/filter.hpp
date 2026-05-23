@@ -24,7 +24,7 @@ struct BiquadCoeffs {
  * @ref https://www.earlevel.com/main/2003/02/28/biquads/
  */
 [[nodiscard]] inline Stream biquad(Stream x, BiquadCoeffs coeffs) {
-  return Stream([x = std::move(x), coeffs, s1 = 0.f, s2 = 0.f]() mutable {
+  return Stream([x, coeffs, s1 = 0.f, s2 = 0.f]() mutable {
     const float xn = x.next();
     const float yn = coeffs.a0 * xn + s1;
     s1 = coeffs.a1 * xn - coeffs.b1 * yn + s2;
@@ -35,8 +35,7 @@ struct BiquadCoeffs {
 
 // rise/fall are max change per sample
 [[nodiscard]] inline Stream slew(Stream x, Stream rise, Stream fall) {
-  return Stream([x = std::move(x), rise = std::move(rise),
-                 fall = std::move(fall), yz = 0.f]() mutable {
+  return Stream([x, rise, fall, yz = 0.f]() mutable {
     float xn = x.next();
     float rn = rise.next();
     float fn = fall.next();
@@ -48,7 +47,7 @@ struct BiquadCoeffs {
 
 // one pole lag filter
 [[nodiscard]] inline Stream lag(Stream x, Stream a) {
-  return Stream([x = std::move(x), a = std::move(a), yz = 0.f]() mutable {
+  return Stream([x, a, yz = 0.f]() mutable {
     float ac = std::clamp(a.next(), 0.f, 1.f);
     float xn = x.next();
     float yn = (1.f - ac) * xn + ac * yz;
@@ -65,8 +64,7 @@ enum class SvfMode { Lowpass, Bandpass, Highpass };
 // Ref: The Art of VA Filter Design, Zavalishin.
 template <SvfMode Mode>
 [[nodiscard]] inline Stream svf_impl(Stream x, Stream cutoff, Stream res) {
-  return Stream([x = std::move(x), cutoff = std::move(cutoff),
-                 res = std::move(res), s1 = 0.f, s2 = 0.f]() mutable {
+  return Stream([x, cutoff, res, s1 = 0.f, s2 = 0.f]() mutable {
     constexpr float pi = std::numbers::pi_v<float>;
     const float hz = std::clamp(cutoff.next(), 0.f, SampleRate * 0.4999f);
     const float rn = std::clamp(res.next(), 0.f, 0.9999f);
@@ -91,16 +89,13 @@ template <SvfMode Mode>
 }  // namespace detail
 
 [[nodiscard]] inline Stream svf_lp(Stream x, Stream cutoff, Stream res) {
-  return detail::svf_impl<detail::SvfMode::Lowpass>(
-      std::move(x), std::move(cutoff), std::move(res));
+  return detail::svf_impl<detail::SvfMode::Lowpass>(x, cutoff, res);
 }
 [[nodiscard]] inline Stream svf_bp(Stream x, Stream cutoff, Stream res) {
-  return detail::svf_impl<detail::SvfMode::Bandpass>(
-      std::move(x), std::move(cutoff), std::move(res));
+  return detail::svf_impl<detail::SvfMode::Bandpass>(x, cutoff, res);
 }
 [[nodiscard]] inline Stream svf_hp(Stream x, Stream cutoff, Stream res) {
-  return detail::svf_impl<detail::SvfMode::Highpass>(
-      std::move(x), std::move(cutoff), std::move(res));
+  return detail::svf_impl<detail::SvfMode::Highpass>(x, cutoff, res);
 }
 
 // Non-interpolating delay line with no feedback.
@@ -108,7 +103,7 @@ template <SvfMode Mode>
   std::size_t delay_samples =
       static_cast<std::size_t>(delay_s * SampleRate);
   std::vector<float> buf(delay_samples + 1, 0.f);
-  return Stream([x = std::move(x), buf = std::move(buf),
+  return Stream([x, buf = std::move(buf),
                  write_pos = std::size_t(0)]() mutable -> float {
     std::size_t sz = buf.size();
     std::size_t read_pos = (write_pos + 1u) % sz;
@@ -128,8 +123,7 @@ template <SvfMode Mode>
     std::vector<float> buf;
     std::size_t write_pos = 0;
   };
-  return Stream([x = std::move(x), delay_time = std::move(delay_time),
-                 decay_time = std::move(decay_time),
+  return Stream([x, delay_time, decay_time,
                  state = std::make_shared<State>()]() mutable -> float {
     float dt = std::max(delay_time.next(), 0.f);
     float dcy = decay_time.next();

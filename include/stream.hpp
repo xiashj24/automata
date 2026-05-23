@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <numbers>
 #include <span>
 
@@ -13,99 +14,108 @@
 
 namespace automata {
 
+// Incremented by Stream::render() before each sample
+inline thread_local uint64_t current_tick = 0;
+
 /**
  * @brief sequential stream of samples
+ *
+ * Copies share the same generator (ref-counted, O(1) copy). Within each
+ * render sample, next() computes at most once — safe for multiple consumers.
  */
 class Stream {
-  using Func = std::function<float()>;
-  Func gen;
+  struct State {
+    std::function<float()> gen;
+    float cache_val = 0.f;
+    uint64_t cache_tick = ~0ull;
+  };
+  std::shared_ptr<State> state;
 
 public:
-  explicit Stream(Func gen) : gen(std::move(gen)) {}
+  explicit Stream(std::function<float()> gen)
+      : state(std::make_shared<State>(State{std::move(gen)})) {}
   // cppcheck-suppress noExplicitConstructor
   Stream(const Signal& sig, int start = 0)
-      : gen([sig, n = start]() mutable { return sig[n++]; }) {}
+      : Stream([sig, n = start]() mutable -> float { return sig[n++]; }) {}
   // cppcheck-suppress noExplicitConstructor
-  Stream(float v) : gen([v]() { return v; }) {}
+  Stream(float v) : Stream([v]() -> float { return v; }) {}
   // cppcheck-suppress noExplicitConstructor
-  Stream(float* ptr) : gen([ptr]() { return *ptr; }) {}
+  Stream(float* ptr) : Stream([ptr]() -> float { return *ptr; }) {}
   Stream(std::nullptr_t) = delete;
 
-  float next() { return gen(); }
+  float next() {
+    if (current_tick != 0 && state->cache_tick == current_tick)
+      return state->cache_val;
+    state->cache_val = state->gen();
+    state->cache_tick = current_tick;
+    return state->cache_val;
+  }
 
   void render(std::span<float> buf) {
-    std::generate(buf.begin(), buf.end(), [this] { return next(); });
+    for (auto& s : buf) {
+      ++current_tick;
+      s = next();
+    }
   }
 
-  [[nodiscard]] Stream to_bipolar() {
-    return Stream([g = std::move(gen)]() { return g() * 2.f - 1.f; });
+  [[nodiscard]] Stream bipolar() const {
+    return Stream([src = *this]() mutable { return src.next() * 2.f - 1.f; });
   }
-  [[nodiscard]] Stream to_unipolar() {
-    return Stream([g = std::move(gen)]() { return (g() + 1.f) * 0.5f; });
+  [[nodiscard]] Stream unipolar() const {
+    return Stream(
+        [src = *this]() mutable { return (src.next() + 1.f) * 0.5f; });
   }
-  [[nodiscard]] Stream exp2() {
-    return Stream([g = std::move(gen)]() { return std::exp2(g()); });
+  [[nodiscard]] Stream exp2() const {
+    return Stream([src = *this]() mutable { return std::exp2(src.next()); });
   }
-  [[nodiscard]] Stream vpow(float n) {
-    return Stream([g = std::move(gen), n]() mutable { return std::pow(g(), n); });
+  [[nodiscard]] Stream vpow(float n) const {
+    return Stream(
+        [src = *this, n]() mutable { return std::pow(src.next(), n); });
   }
 };
 
 // stream-stream arithmetic
 [[nodiscard]] inline Stream operator+(Stream lhs, Stream rhs) {
-  return Stream([lhs = std::move(lhs), rhs = std::move(rhs)]() mutable {
-    return lhs.next() + rhs.next();
-  });
+  return Stream([lhs, rhs]() mutable { return lhs.next() + rhs.next(); });
 }
 [[nodiscard]] inline Stream operator-(Stream lhs, Stream rhs) {
-  return Stream([lhs = std::move(lhs), rhs = std::move(rhs)]() mutable {
-    return lhs.next() - rhs.next();
-  });
+  return Stream([lhs, rhs]() mutable { return lhs.next() - rhs.next(); });
 }
 [[nodiscard]] inline Stream operator*(Stream lhs, Stream rhs) {
-  return Stream([lhs = std::move(lhs), rhs = std::move(rhs)]() mutable {
-    return lhs.next() * rhs.next();
-  });
+  return Stream([lhs, rhs]() mutable { return lhs.next() * rhs.next(); });
 }
 [[nodiscard]] inline Stream operator/(Stream lhs, Stream rhs) {
-  return Stream([lhs = std::move(lhs), rhs = std::move(rhs)]() mutable {
-    return lhs.next() / rhs.next();
-  });
+  return Stream([lhs, rhs]() mutable { return lhs.next() / rhs.next(); });
 }
 
 // stream-scalar arithmetic (scalar promotes to Stream via implicit constructor)
 [[nodiscard]] inline Stream operator+(Stream lhs, float rhs) {
-  return Stream(
-      [lhs = std::move(lhs), rhs]() mutable { return lhs.next() + rhs; });
+  return Stream([lhs, rhs]() mutable { return lhs.next() + rhs; });
 }
 [[nodiscard]] inline Stream operator-(Stream lhs, float rhs) {
-  return Stream(
-      [lhs = std::move(lhs), rhs]() mutable { return lhs.next() - rhs; });
+  return Stream([lhs, rhs]() mutable { return lhs.next() - rhs; });
 }
 [[nodiscard]] inline Stream operator*(Stream lhs, float rhs) {
-  return Stream(
-      [lhs = std::move(lhs), rhs]() mutable { return lhs.next() * rhs; });
+  return Stream([lhs, rhs]() mutable { return lhs.next() * rhs; });
 }
 [[nodiscard]] inline Stream operator/(Stream lhs, float rhs) {
-  return Stream(
-      [lhs = std::move(lhs), rhs]() mutable { return lhs.next() / rhs; });
+  return Stream([lhs, rhs]() mutable { return lhs.next() / rhs; });
 }
 [[nodiscard]] inline Stream operator+(float lhs, Stream rhs) {
-  return std::move(rhs) + lhs;
+  return rhs + lhs;
 }
 [[nodiscard]] inline Stream operator-(float lhs, Stream rhs) {
-  return Stream(lhs) - std::move(rhs);
+  return Stream(lhs) - rhs;
 }
 [[nodiscard]] inline Stream operator*(float lhs, Stream rhs) {
-  return std::move(rhs) * lhs;
+  return rhs * lhs;
 }
 [[nodiscard]] inline Stream operator/(float lhs, Stream rhs) {
-  return Stream(lhs) / std::move(rhs);
+  return Stream(lhs) / rhs;
 }
 
 [[nodiscard]] inline Stream hold(Stream src, Stream trigger) {
-  return Stream([src = std::move(src), trigger = std::move(trigger),
-                 value = 0.f]() mutable -> float {
+  return Stream([src, trigger, value = 0.f]() mutable -> float {
     if (trigger.next() > 0.5f)
       value = src.next();
     return value;
@@ -113,7 +123,7 @@ public:
 }
 
 [[nodiscard]] inline Stream phasor(Stream w) {
-  return Stream([w = std::move(w), phase = 0.f]() mutable {
+  return Stream([w, phase = 0.f]() mutable {
     float out = phase;
     phase = std::fmod(phase + w.next(), 1.f);
     return out;
@@ -124,14 +134,13 @@ public:
 
 [[nodiscard]] inline Stream osc(Stream hz, Stream phase_mod = 0.f) {
   constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
-  return Stream([phase = phasor(std::move(hz) / SampleRate),
-                 phase_mod = std::move(phase_mod)]() mutable {
+  return Stream([phase = phasor(hz / SampleRate), phase_mod]() mutable {
     return std::sin(two_pi * (phase.next() + phase_mod.next()));
   });
 }
 
 [[nodiscard]] inline Stream saw(Stream hz) {
-  return phasor(std::move(hz) / SampleRate).to_bipolar();
+  return phasor(hz / SampleRate).bipolar();
 }
 
 // MusicDSP LCG (Hal Chamberlain / Phil Burk). Output: float in [0, max).
@@ -150,13 +159,13 @@ public:
   constexpr float denom =
       static_cast<float>(std::numeric_limits<uint32_t>::max());
   return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom)
-      .to_bipolar();
+      .bipolar();
 }
 
 // Stepped random noise in (-1, 1): new value drawn at `freq` Hz, held between
 // steps.
-[[nodiscard]] inline Stream lf_noise0(Stream freq, uint32_t seed = 1u) {
-  return Stream([freq = std::move(freq), rng = noise(seed), current = 0.f,
+[[nodiscard]] inline Stream lf_noise_0(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq, rng = noise(seed), current = 0.f,
                  samples_left = 0]() mutable -> float {
     if (samples_left <= 0) {
       current = rng.next();
@@ -169,8 +178,8 @@ public:
 }
 
 // Linear interpolation between random values drawn at `freq` Hz.
-[[nodiscard]] inline Stream lf_noise1(Stream freq, uint32_t seed = 1u) {
-  return Stream([freq = std::move(freq), rng = noise(seed), start = 0.f,
+[[nodiscard]] inline Stream lf_noise_1(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq, rng = noise(seed), start = 0.f,
                  target = 0.f, samples_left = 0,
                  period = 1]() mutable -> float {
     if (samples_left <= 0) {
@@ -188,8 +197,8 @@ public:
 }
 
 // Smoothstep interpolation between random values drawn at `freq` Hz.
-[[nodiscard]] inline Stream lf_noise2(Stream freq, uint32_t seed = 1u) {
-  return Stream([freq = std::move(freq), rng = noise(seed), start = 0.f,
+[[nodiscard]] inline Stream lf_noise_2(Stream freq, uint32_t seed = 1u) {
+  return Stream([freq, rng = noise(seed), start = 0.f,
                  target = 0.f, samples_left = 0,
                  period = 1]() mutable -> float {
     if (samples_left <= 0) {
@@ -209,7 +218,7 @@ public:
 
 // Soft saturator: x / (1 + |x|), maps R -> (-1, 1).
 [[nodiscard]] inline Stream distort(Stream x) {
-  return Stream([x = std::move(x)]() mutable -> float {
+  return Stream([x]() mutable -> float {
     float xn = x.next();
     return xn / (1.f + std::abs(xn));
   });
@@ -217,20 +226,18 @@ public:
 
 // Triangle oscillator: linear ramp -1→+1→-1 per cycle.
 [[nodiscard]] inline Stream tri(Stream hz) {
-  return Stream(
-      [ph = phasor(std::move(hz) / SampleRate)]() mutable -> float {
-        float p = ph.next();
-        return p < 0.5f ? 4.f * p - 1.f : 3.f - 4.f * p;
-      });
+  return Stream([ph = phasor(hz / SampleRate)]() mutable -> float {
+    float p = ph.next();
+    return p < 0.5f ? 4.f * p - 1.f : 3.f - 4.f * p;
+  });
 }
 
 // Square oscillator: +1 for first `width` of period, -1 otherwise.
 [[nodiscard]] inline Stream sqr(Stream hz, Stream width = 0.5f) {
   return Stream(
-      [ph = phasor(std::move(hz) / SampleRate),
-       width = std::move(width)]() mutable -> float {
-        return ph.next() < width.next() ? 1.f : -1.f;
-      });
+      [ph = phasor(hz / SampleRate), width]() mutable -> float {
+    return ph.next() < width.next() ? 1.f : -1.f;
+  });
 }
 
 // Random log-uniform value from [lo, hi] resampled on each trigger.
@@ -242,8 +249,8 @@ public:
   constexpr uint32_t lcg_add = 907633515u;
   float log_lo = std::log(lo);
   float log_range = std::log(hi / lo);
-  return Stream([trigger = std::move(trigger), log_lo, log_range,
-                 state = seed, value = lo]() mutable -> float {
+  return Stream([trigger, log_lo, log_range, state = seed,
+                 value = lo]() mutable -> float {
     if (trigger.next() > 0.5f) {
       state = state * lcg_mul + lcg_add;
       float t = static_cast<float>(state) / static_cast<float>(UINT32_MAX);
@@ -262,7 +269,7 @@ public:
   float log_lo = std::log(out_lo);
   float log_range = std::log(out_hi / out_lo);
   float in_range = in_hi - in_lo;
-  return Stream([src = std::move(src), in_lo, in_range, log_lo,
+  return Stream([src, in_lo, in_range, log_lo,
                  log_range]() mutable -> float {
     float t = std::clamp((src.next() - in_lo) / in_range, 0.f, 1.f);
     return std::exp(log_lo + t * log_range);
@@ -272,7 +279,7 @@ public:
 // Wrap values into [lo, hi) with modular arithmetic.
 [[nodiscard]] inline Stream wrap(Stream src, float lo, float hi) {
   float range = hi - lo;
-  return Stream([src = std::move(src), lo, range]() mutable -> float {
+  return Stream([src, lo, range]() mutable -> float {
     float v = std::fmod(src.next() - lo, range);
     if (v < 0.f)
       v += range;

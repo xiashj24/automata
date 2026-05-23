@@ -18,7 +18,7 @@ namespace automata {
   int sustain_n = static_cast<int>(sustain_s * SampleRate);
   int release_n = std::max(1, static_cast<int>(release_s * SampleRate));
   int total = attack_n + sustain_n + release_n;
-  return Stream([trigger = std::move(trigger), attack_n, sustain_n,
+  return Stream([trigger, attack_n, sustain_n,
                  release_n, total, phase = total]() mutable -> float {
     if (trigger.next() > 0.5f)
       phase = 0;
