@@ -13,3 +13,9 @@
 [submodule "external/cane"]
 	path = external/cane
 	url = https://github.com/xiashj24/cane
+[submodule "external/signalflow"]
+	path = external/signalflow
+	url = https://github.com/ideoforms/signalflow
+[submodule "external/sc-book-examples"]
+	path = external/sc-book-examples
+	url = https://github.com/tado/sc-book-examples
