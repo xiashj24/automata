@@ -1,15 +1,140 @@
 #pragma once
 
+#include <cstdint>
+#include <numeric>
+#include <vector>
+
+#include <stream.hpp>
+#include <tempo.hpp>
+
 namespace automata {
 
-/**
- * @brief pattern generator inspired by Supercollider and isobar
- *
- */
-class Pattern {
+namespace detail {
 
+constexpr uint32_t lcg_mul = 196314165u;
+constexpr uint32_t lcg_add = 907633515u;
 
-    
-};
+inline uint32_t lcg_next(uint32_t state) {
+  return state * lcg_mul + lcg_add;
+}
+
+// Pick a random index in [0, n).
+inline std::size_t lcg_index(uint32_t state, std::size_t n) {
+  return static_cast<std::size_t>(
+      (static_cast<uint64_t>(state) * static_cast<uint64_t>(n)) >> 32);
+}
+
+}  // namespace detail
+
+// Cycle through values endlessly, one per trigger pulse.
+[[nodiscard]] inline Stream seq(std::vector<float> values, Clock clock) {
+  auto raw = Stream([vals = std::move(values), i = 0u]() mutable -> float {
+    float v = vals[i];
+    i = (i + 1u) % vals.size();
+    return v;
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Pick a random value with replacement on each trigger pulse.
+[[nodiscard]] inline Stream choose(std::vector<float> values, Clock clock,
+                                   uint32_t seed = 1u) {
+  auto raw = Stream([vals = std::move(values),
+                     state = seed]() mutable -> float {
+    state = detail::lcg_next(state);
+    return vals[detail::lcg_index(state, vals.size())];
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Pick a random value with no consecutive repeats.
+[[nodiscard]] inline Stream xchoose(std::vector<float> values, Clock clock,
+                                    uint32_t seed = 1u) {
+  auto raw =
+      Stream([vals = std::move(values), state = seed,
+              last = std::size_t(-1)]() mutable -> float {
+        std::size_t idx;
+        do {
+          state = detail::lcg_next(state);
+          idx = detail::lcg_index(state, vals.size());
+        } while (idx == last && vals.size() > 1);
+        last = idx;
+        return vals[idx];
+      });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Pick a random value according to (unnormalized) weights.
+[[nodiscard]] inline Stream wchoose(std::vector<float> values,
+                                    std::vector<float> weights, Clock clock,
+                                    uint32_t seed = 1u) {
+  float total = std::accumulate(weights.begin(), weights.end(), 0.f);
+
+  auto raw = Stream([vals = std::move(values), wts = std::move(weights),
+                     total, state = seed]() mutable -> float {
+    state = detail::lcg_next(state);
+    float target = static_cast<float>(state) / static_cast<float>(UINT32_MAX) *
+                   total;
+    float cumulative = 0.f;
+    for (std::size_t i = 0; i < wts.size(); ++i) {
+      cumulative += wts[i];
+      if (target < cumulative)
+        return vals[i];
+    }
+    return vals.back();
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Finite range cycling: start, start+step, …, up to (but not including) stop,
+// then loops.
+[[nodiscard]] inline Stream range(float start, float stop, float step,
+                                  Clock clock) {
+  auto raw = Stream([start, stop, step, value = start]() mutable -> float {
+    float out = value;
+    value += step;
+    if (step > 0.f ? value >= stop : value <= stop)
+      value = start;
+    return out;
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Arithmetic sequence: start, start+step, start+2·step, …
+[[nodiscard]] inline Stream series(float start, float step, Clock clock) {
+  auto raw = Stream([value = start, step]() mutable -> float {
+    float out = value;
+    value += step;
+    return out;
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Geometric sequence: start, start·ratio, start·ratio², …
+[[nodiscard]] inline Stream geom(float start, float ratio, Clock clock) {
+  auto raw = Stream([value = start, ratio]() mutable -> float {
+    float out = value;
+    value *= ratio;
+    return out;
+  });
+  return hold(std::move(raw), clock.trigger());
+}
+
+// Brownian random walk clamped to [lo, hi], stepping by a random amount in
+// [-step, +step].
+[[nodiscard]] inline Stream walk(float lo, float hi, float step, Clock clock,
+                                  float init = 0.f, uint32_t seed = 1u) {
+  auto raw = Stream([lo, hi, step, value = init,
+                     state = seed]() mutable -> float {
+    state = detail::lcg_next(state);
+    float delta = (static_cast<float>(state) / static_cast<float>(UINT32_MAX) *
+                   2.f - 1.f) * step;
+    value += delta;
+    if (value < lo) value = lo;
+    if (value > hi) value = hi;
+    return value;
+  });
+  return hold(std::move(raw), clock.trigger());
+}
 
 }  // namespace automata

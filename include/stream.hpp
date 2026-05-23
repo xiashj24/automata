@@ -100,6 +100,15 @@ public:
   return Stream(lhs) / std::move(rhs);
 }
 
+[[nodiscard]] inline Stream hold(Stream src, Stream trigger) {
+  return Stream([src = std::move(src), trigger = std::move(trigger),
+                 value = 0.f]() mutable -> float {
+    if (trigger.next() > 0.5f)
+      value = src.next();
+    return value;
+  });
+}
+
 [[nodiscard]] inline Stream phasor(Stream w) {
   return Stream([w = std::move(w), phase = 0.f]() mutable {
     float out = phase;

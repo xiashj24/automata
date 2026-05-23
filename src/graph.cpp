@@ -1,8 +1,10 @@
 #include <graph.hpp>
 #include <filter.hpp>
 #include <io.hpp>
+#include <note_number.hpp>
 #include <stream.hpp>
 #include <units.hpp>
+#include <pattern.hpp>
 
 namespace automata {
 using namespace literals;
@@ -11,29 +13,23 @@ using namespace literals;
 // {LocalOut.ar(a=CombN.ar(BPF.ar(LocalIn.ar(2)*7.5+Saw.ar([32,33],0.2),2**LFNoise0.kr(4/3,4)*300,0.1).distort,2,2,40));a}.play
 // it sounded completely different...
 
-// LocalIn.ar(2)
-auto in_signal = local_in();
+// auto in_signal = local_in();
+// auto saw_osc = (saw(32_hz) + saw(33_hz)) * 0.1f;
+// auto mix = in_signal * 7.5f + saw_osc;
+// auto freq = (lf_noise0(1.33_hz) * 4.f).exp2() * 300.f;
+// auto filtered = svf_bp(mix, freq, 0.9f);
+// auto clipped = distort(filtered);
+// auto comb = comb_n(clipped, 2_s, 40_s);
+// auto out = local_out(comb);
 
-// Saw.ar([32, 33], 0.2) — stereo detuned saws, mul=0.2, summed to mono
-auto saw_osc = (saw(32_hz) + saw(33_hz)) * 0.1f;
+Stream simple_fm(Stream freq, Stream fm_index) {
+  auto modulator = osc(freq * fm_index);
+  return osc(freq, modulator);
+}
 
-// mix = in * 7.5 + saw
-auto mix = in_signal * 7.5f + saw_osc;
-
-// freq = 2 ** LFNoise0.kr(4/3, 4) * 300 → stepped random in [~19, ~4800] Hz
-auto freq = (lf_noise0(1.33_hz) * 4.f).exp2() * 300.f;
-
-// BPF with rq=0.1: res = 1 - rq/2 = 0.95
-auto filtered = svf_bp(mix, freq, 0.9f);
-
-// .distort
-auto clipped = distort(filtered);
-
-// CombN.ar(bpf, 2, 2, 40)
-auto comb = comb_n(clipped, 2_s, 40_s);
-
-// LocalOut.ar(out)
-auto out = local_out(comb);
+// 00
+auto notes = range(60, 73, 1, Clock(120_bpm, 4.f));
+auto out = simple_fm(note_number_to_frequency(notes), 1.f);
 
 void render(std::span<float> buf) {
   out.render(buf);

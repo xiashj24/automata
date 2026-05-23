@@ -81,9 +81,8 @@ TEST_CASE("impulse train", "[signal][create]") {
 }
 
 TEST_CASE("biquad feedforward impulse response", "[signal][biquad]") {
-  BiquadState state;
   auto sig =
-      biquad(Signal::impulse(), {.a0 = 1.f, .a1 = 0.5f, .a2 = 0.25f}, state);
+      biquad(Signal::impulse(), {.a0 = 1.f, .a1 = 0.5f, .a2 = 0.25f});
   REQUIRE(sig.next() == 1.f);
   REQUIRE(sig.next() == 0.5f);
   REQUIRE(sig.next() == 0.25f);
@@ -91,22 +90,11 @@ TEST_CASE("biquad feedforward impulse response", "[signal][biquad]") {
 }
 
 TEST_CASE("biquad feedback impulse response", "[signal][biquad]") {
-  BiquadState state;
-  auto sig = biquad(Signal::impulse(), {.a0 = 1.f, .b1 = 0.5f}, state);
+  auto sig = biquad(Signal::impulse(), {.a0 = 1.f, .b1 = 0.5f});
   REQUIRE(sig.next() == 1.f);
   REQUIRE(sig.next() == -0.5f);
   REQUIRE(sig.next() == 0.25f);
   REQUIRE(sig.next() == -0.125f);
-}
-
-TEST_CASE("biquad state is externally visible", "[signal][biquad]") {
-  BiquadState state;
-  auto sig = biquad(Signal::impulse(), {.a0 = 1.f, .b1 = 0.5f}, state);
-  sig.next();  // n=0: yn=1, s1 = -0.5, s2 = 0
-  REQUIRE(state.s1 == -0.5f);
-  REQUIRE(state.s2 == 0.f);
-  sig.next();  // n=1: yn=-0.5
-  REQUIRE(state.s1 == 0.25f);
 }
 
 TEST_CASE("phasor", "[signal][create]") {
@@ -129,9 +117,8 @@ TEST_CASE("osc", "[signal][create]") {
 }
 
 TEST_CASE("lag with Signal-valued coefficient", "[signal][lag]") {
-  float yz = 0.f;
   Signal coeff = Signal::phasor(1.f / 4);  // 0, 0.25, 0.5, 0.75, ...
-  auto sig = lag(1.f, coeff, yz);
+  auto sig = lag(1.f, coeff);
   // n=0: ac=0   → yn = 1*1 + 0*0   = 1.0
   // n=1: ac=0.25 → yn = 0.75*1 + 0.25*1 = 1.0
   REQUIRE(sig.next() == 1.f);
@@ -139,8 +126,7 @@ TEST_CASE("lag with Signal-valued coefficient", "[signal][lag]") {
 }
 
 TEST_CASE("slew limiter", "[signal][slew]") {
-  float yz = 0.f;
-  auto sig = slew(1.f, 0.25f, 0.25f, yz);
+  auto sig = slew(1.f, 0.25f, 0.25f);
   REQUIRE(sig.next() == 0.25f);
   REQUIRE(sig.next() == 0.5f);
   REQUIRE(sig.next() == 0.75f);
@@ -148,18 +134,16 @@ TEST_CASE("slew limiter", "[signal][slew]") {
 }
 
 TEST_CASE("lag filter", "[signal][lag]") {
-  float yz = 0.f;
-  auto sig = lag(1.f, 0.5f, yz);
+  auto sig = lag(1.f, 0.5f);
   REQUIRE(sig.next() == 0.5f);
   REQUIRE(sig.next() == 0.75f);
   REQUIRE(sig.next() == 0.875f);
 }
 
 TEST_CASE("composed lag filters", "[signal][lag]") {
-  float yz1 = 0.f, yz2 = 0.f;
   // Two lag filters in series — Signal::Stream output feeds directly into
   // next
-  auto filtered = lag(lag(1.f, 0.5f, yz1), 0.5f, yz2);
+  auto filtered = lag(lag(1.f, 0.5f), 0.5f);
   // Stage 1 output: 0.5, 0.75, 0.875, ...
   // Stage 2 input is stage 1 output, also with a=0.5:
   // n=0: yn2 = 0.5*0.5 + 0.5*0 = 0.25
@@ -169,9 +153,8 @@ TEST_CASE("composed lag filters", "[signal][lag]") {
 }
 
 TEST_CASE("Signal::Stream modulated by stateful signal", "[signal][lag]") {
-  float env_yz = 0.f, lag_yz = 0.f;
   // Slew-limited envelope (0→1 at rate 0.5/sample) modulates the lag coeff
-  auto filtered = lag(1.f, slew(1.f, 0.5f, 0.5f, env_yz), lag_yz);
+  auto filtered = lag(1.f, slew(1.f, 0.5f, 0.5f));
   // Envelope: n=0→0.5, n=1→1.0
   // n=0: ac=clamp(0.5)=0.5, yn = 0.5*1 + 0.5*0 = 0.5
   // n=1: ac=clamp(1.0)=1.0, yn = 0*1 + 1*0.5  = 0.5
