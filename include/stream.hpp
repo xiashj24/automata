@@ -23,6 +23,7 @@ inline thread_local uint64_t current_tick = 0;
  * render sample, next() computes at most once — safe for multiple consumers.
  */
 class Stream {
+private:
   struct State {
     std::move_only_function<float()> gen;
     float cache_val = 0.f;

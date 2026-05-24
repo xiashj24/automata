@@ -70,13 +70,13 @@ Stream arp_voice(Clock beat,
 //            simple_fm(bassline, 1.f) * 0.3f;
 
 // 03 - isobar ex-euclid
-// Clock beat(100_bpm, 4);
-// auto out = (osc(note_to_frequency(60)) * euclid(5, 8, beat.at(16)) +
-//             osc(note_to_frequency(62)) * euclid(5, 13, beat.at(8)) +
-//             osc(note_to_frequency(64)) * euclid(7, 15, beat.at(8)) +
-//             osc(note_to_frequency(67)) * euclid(6, 19, beat.at(16)) +
-//             osc(note_to_frequency(71)) * euclid(7, 23, beat.at(8))) *
-//            0.15f;
+Clock beat(100_bpm, 4);
+auto out = (osc(note_to_frequency(60)) * euclid(5, 8, beat.at(16)) +
+            osc(note_to_frequency(62)) * euclid(5, 13, beat.at(8)) +
+            osc(note_to_frequency(64)) * euclid(7, 15, beat.at(8)) +
+            osc(note_to_frequency(67)) * euclid(6, 19, beat.at(16)) +
+            osc(note_to_frequency(71)) * euclid(7, 23, beat.at(8))) *
+           0.15f;
 
 // 04 - isobar ex-permutations
 // Clock beat(60_bpm, 4);
@@ -87,12 +87,12 @@ Stream arp_voice(Clock beat,
 // auto out = (simple_fm(pitch, 1.5f) + simple_fm(pitch_lo, 2.f)) * 0.2f;
 
 // 05 - isobar ex-piano-phase (Steve Reich, 1967)
-Clock beat(160_bpm, 8);
-const std::vector<float> piano_phase = {-7, -5, 0, 2,  3, -5,
-                                        -7, 2,  0, -5, 3, 2};
-auto voice1 = note_to_frequency(seq(piano_phase, beat) + 60);
-auto voice2 = note_to_frequency(seq(piano_phase, beat / 1.01f) + 72);
-auto out = (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f)) * 0.3f;
+// Clock beat(160_bpm, 8);
+// const std::vector<float> piano_phase = {-7, -5, 0, 2,  3, -5,
+//                                         -7, 2,  0, -5, 3, 2};
+// auto voice1 = note_to_frequency(seq(piano_phase, beat) + 60);
+// auto voice2 = note_to_frequency(seq(piano_phase, beat / 1.01f) + 72);
+// auto out = (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f)) * 0.3f;
 
 // 06 - isobar ex-walk
 // Clock beat(170_bpm, 16);

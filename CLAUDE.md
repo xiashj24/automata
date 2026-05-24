@@ -75,6 +75,37 @@ When adding new features, study the submodules in `external/` for prior art and 
 
 Uses Catch2 v3. Tests live in `test/` and favour `STATIC_REQUIRE` (constexpr checks). The `develop` preset enables cppcheck and cpplint.
 
+## Project direction
+
+### DSL backend
+
+Automata is intended to become the backend of a generative music DSL. The DSL will be implemented as a **tree-walking interpreter** — not a full compiler. Evaluating a DSL expression produces `Stream` objects directly; no code generation step is needed. The C++ API in `graph.cpp` already reads like a DSL; the interpreter maps AST nodes onto the same factory calls.
+
+### CV output
+
+CV signals are modelled as additional `Stream` outputs alongside audio — same type, different sink. The PC sends CV as USB audio channels; the target device receives samples and clocks them to an external DAC.
+
+Target hardware options, in order of preference:
+
+| Device | USB Audio | MCU | Notes |
+|---|---|---|---|
+| **Teensy 4.1** | UAC 2.0 (HS) | i.MX RT1062, 600 MHz M7 | Easiest path — Teensy Audio Library has USB audio device out of the box |
+| **Electrosmith Daisy Seed** | UAC 2.0 (HS) | STM32H750, 480 MHz M7 | Purpose-built audio platform; LibDaisy audio callback mirrors automata's render loop. Option to run light DSP locally in future. |
+| **Raspberry Pi Pico 2 W** | UAC 1.0 (FS) | RP2350, 150 MHz M33 | Cheapest; 48 kHz 16-bit sufficient for control-rate CV, but no audio-rate modulation |
+
+UAC 2.0 (requires USB High Speed) enables audio-rate CV (192 kHz update rate, 32-bit resolution) — useful for oscillator FM and waveshaping via CV. UAC 1.0 is limited to control-rate signals but is adequate for pitch, gates, and slow modulation.
+
+Running the DSP backend on any of these MCUs is **not** the target: `shared_ptr`, `move_only_function`, `vector`, and `thread_local` all require hosted-environment rework. These devices are CV peripherals, not DSP engines.
+
+### Live coding
+
+The current architecture supports live graph swapping without structural changes. The root stream (`out`) can be wrapped in `std::atomic<std::shared_ptr<State>>` so the interpreter thread installs a new graph with one atomic store while the audio thread holds a snapshot for the duration of each render call. Controllable parameters are exposed as `std::atomic<float>` slots read by a stream closure (`memory_order_relaxed` is correct — one-sample-late updates are acceptable).
+
+### Design decisions (do not revisit without measurement)
+
+- **Block processing** (fill N-sample buffers per node, SignalFlow-style): not worth the complexity at current graph sizes. Per-sample pull with `cache_tick` deduplication is sufficient.
+- **Graph introspection** (explicit `inputs` list on `State`): YAGNI until the DSL interpreter needs it.
+
 ## Code conventions
 
 - `constexpr` whenever possible
