@@ -70,6 +70,8 @@ When adding new features, study the submodules in `external/` for prior art and 
 - **`isobar/`** — Python music pattern library; reference for pattern and sequencing abstractions
 - **`signalflow/`** — Python/C++ signal processing framework; reference for graph-based DSP
 - **`strudel/`** — browser-based live coding (TidalCycles port); reference for pattern syntax and mini-notation
+- **`uSEQ/`** — FRP-based live-coding Eurorack sequencer (RP2040, ModuLisp DSL); reference for explicit node-DAG compilation (CSE, constant folding, topological sort), declared cross-sample state (`defstate`/`integrate`/UGens), zero-allocation flat-array hot path, and live recompilation with last-known-good fallback. Targets Workshop Computer hardware.
+- **`Workshop_Computer/`** — Music Thing Modular Workshop Computer SDK; the target CV output hardware. RP2040, ComputerCard C++ framework (header-only, MIT). I/O: 2× audio ±6V 12-bit (MCP4822 SPI DAC), 2× CV ±6V 12-bit/19-bit sigma-delta (PWM), 2× pulse (5–6V gate). UAC 1.0 USB audio firmware exists (`releases/06_usb_audio`). See also `Demonstrations+HelloWorlds/AI/WORKSHOP_COMPUTER_AI_DIRECTIVE.md` for hardware errata and DSP guidance.
 
 ### Tests
 
