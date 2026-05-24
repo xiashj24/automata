@@ -45,10 +45,10 @@ cpmaddpackage(
   YES)
 
 # MARK: library interface
-add_library(automata STATIC src/signal.cpp)
+add_library(automata INTERFACE)
 add_library(automata::automata ALIAS automata)
-target_include_directories(automata PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_features(automata PUBLIC cxx_std_${CMAKE_CXX_STANDARD})
+target_include_directories(automata INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_features(automata INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 # MARK: tooling
 if(AUTOMATA_ENABLE_CACHE)

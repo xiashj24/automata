@@ -6,5 +6,6 @@
                 "cmd": "${workspaceFolder}/build/develop/automata-render \"${file}\""
             }
         ]
-    }
+    },
+    "python.terminal.activateEnvironment": false
 }

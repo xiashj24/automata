@@ -10,7 +10,6 @@
 #include <span>
 
 #include <samplerate.hpp>
-#include <signal.hpp>
 
 namespace automata {
 
@@ -34,9 +33,6 @@ class Stream {
 public:
   explicit Stream(std::function<float()> gen)
       : state(std::make_shared<State>(State{std::move(gen)})) {}
-  // cppcheck-suppress noExplicitConstructor
-  Stream(const Signal& sig, int start = 0)
-      : Stream([sig, n = start]() mutable -> float { return sig[n++]; }) {}
   // cppcheck-suppress noExplicitConstructor
   Stream(float v) : Stream([v]() -> float { return v; }) {}
   // cppcheck-suppress noExplicitConstructor
@@ -158,8 +154,7 @@ public:
 [[nodiscard]] inline Stream noise(uint32_t seed = 1u) {
   constexpr float denom =
       static_cast<float>(std::numeric_limits<uint32_t>::max());
-  return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom)
-      .bipolar();
+  return (rand(std::numeric_limits<uint32_t>::max(), seed) / denom).bipolar();
 }
 
 // Stepped random noise in (-1, 1): new value drawn at `freq` Hz, held between
@@ -179,9 +174,8 @@ public:
 
 // Linear interpolation between random values drawn at `freq` Hz.
 [[nodiscard]] inline Stream lf_noise_1(Stream freq, uint32_t seed = 1u) {
-  return Stream([freq, rng = noise(seed), start = 0.f,
-                 target = 0.f, samples_left = 0,
-                 period = 1]() mutable -> float {
+  return Stream([freq, rng = noise(seed), start = 0.f, target = 0.f,
+                 samples_left = 0, period = 1]() mutable -> float {
     if (samples_left <= 0) {
       start = target;
       target = rng.next();
@@ -198,9 +192,8 @@ public:
 
 // Smoothstep interpolation between random values drawn at `freq` Hz.
 [[nodiscard]] inline Stream lf_noise_2(Stream freq, uint32_t seed = 1u) {
-  return Stream([freq, rng = noise(seed), start = 0.f,
-                 target = 0.f, samples_left = 0,
-                 period = 1]() mutable -> float {
+  return Stream([freq, rng = noise(seed), start = 0.f, target = 0.f,
+                 samples_left = 0, period = 1]() mutable -> float {
     if (samples_left <= 0) {
       start = target;
       target = rng.next();
@@ -234,8 +227,7 @@ public:
 
 // Square oscillator: +1 for first `width` of period, -1 otherwise.
 [[nodiscard]] inline Stream sqr(Stream hz, Stream width = 0.5f) {
-  return Stream(
-      [ph = phasor(hz / SampleRate), width]() mutable -> float {
+  return Stream([ph = phasor(hz / SampleRate), width]() mutable -> float {
     return ph.next() < width.next() ? 1.f : -1.f;
   });
 }
@@ -269,8 +261,7 @@ public:
   float log_lo = std::log(out_lo);
   float log_range = std::log(out_hi / out_lo);
   float in_range = in_hi - in_lo;
-  return Stream([src, in_lo, in_range, log_lo,
-                 log_range]() mutable -> float {
+  return Stream([src, in_lo, in_range, log_lo, log_range]() mutable -> float {
     float t = std::clamp((src.next() - in_lo) / in_range, 0.f, 1.f);
     return std::exp(log_lo + t * log_range);
   });
