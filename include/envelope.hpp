@@ -53,4 +53,85 @@ namespace automata {
   });
 }
 
+// Gated ADSR envelope. Gate high → attack → decay → sustain; gate low → release.
+// sustain_level is the amplitude held during sustain (0 = silence, 1 = full).
+[[nodiscard]] inline Stream adsr(float attack_s, float decay_s,
+                                  float sustain_level, float release_s,
+                                  Stream gate) {
+  float att = 1.f / std::max(attack_s * SampleRate, 1.f);
+  float dec = (1.f - sustain_level) / std::max(decay_s * SampleRate, 1.f);
+  return Stream([gate, att, dec, sus = sustain_level, rel_s = release_s,
+                 lvl = 0.f, prev = 0.f, ph = 0, rr = 0.f]() mutable -> float {
+    float g = gate.next();
+    bool on = g > 0.5f, was = prev > 0.5f;
+    prev = g;
+    if (!was && on) {
+      ph = 1;
+    } else if (was && !on && ph) {
+      rr = lvl / std::max(rel_s * SampleRate, 1.f);
+      ph = 4;
+    }
+    if (ph == 1) {
+      lvl = std::min(lvl + att, 1.f);
+      if (lvl >= 1.f) {
+        if (!on) {
+          rr = lvl / std::max(rel_s * SampleRate, 1.f);
+          ph = 4;
+        } else {
+          ph = 2;
+        }
+      }
+    } else if (ph == 2) {
+      lvl = std::max(lvl - dec, sus);
+      if (lvl <= sus)
+        ph = 3;
+    } else if (ph == 3) {
+      lvl = sus;
+    } else if (ph == 4) {
+      lvl = std::max(lvl - rr, 0.f);
+      if (lvl <= 0.f)
+        ph = 0;
+    }
+    return lvl;
+  });
+}
+
+// Linear ramp from `start` to `end` over `duration_s` seconds, triggered
+// on each rising edge. Holds at `end` after completion.
+[[nodiscard]] inline Stream line(float start, float end, float duration_s,
+                                  Stream trigger) {
+  int dur = std::max(1, static_cast<int>(duration_s * SampleRate));
+  float step = (end - start) / static_cast<float>(dur);
+  return Stream([trigger, start, end, step, lvl = start, phase = dur,
+                 dur]() mutable -> float {
+    if (trigger.next() > 0.5f) {
+      lvl = start;
+      phase = 0;
+    }
+    float out = lvl;
+    if (phase < dur) {
+      lvl = std::min(lvl + step, end);
+      ++phase;
+    }
+    return out;
+  });
+}
+
+// Rectangular (gate-like) envelope: outputs 1 for `duration_s` seconds after
+// each trigger rising edge, then 0.
+[[nodiscard]] inline Stream rect_env(float duration_s, Stream trigger) {
+  int dur = std::max(1, static_cast<int>(duration_s * SampleRate));
+  return Stream([trigger, dur, remaining = 0, prev = 0.f]() mutable -> float {
+    float t = trigger.next();
+    if (prev < 0.5f && t >= 0.5f)
+      remaining = dur;
+    prev = t;
+    if (remaining > 0) {
+      --remaining;
+      return 1.f;
+    }
+    return 0.f;
+  });
+}
+
 }  // namespace automata

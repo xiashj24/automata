@@ -4,28 +4,38 @@ namespace automata {
 namespace literals {
 
 [[nodiscard]] constexpr float operator""_hz(long double v) noexcept {
-    return static_cast<float>(v);
+  return static_cast<float>(v);
 }
 [[nodiscard]] constexpr float operator""_hz(unsigned long long v) noexcept {
-    return static_cast<float>(v);
+  return static_cast<float>(v);
 }
+
 [[nodiscard]] constexpr float operator""_khz(long double v) noexcept {
-    return static_cast<float>(v * 1000.0L);
+  return static_cast<float>(v * 1000.0L);
 }
 [[nodiscard]] constexpr float operator""_khz(unsigned long long v) noexcept {
-    return static_cast<float>(v * 1000ULL);
+  return static_cast<float>(v * 1000ULL);
 }
+
 [[nodiscard]] constexpr float operator""_bpm(long double v) noexcept {
-    return static_cast<float>(v);
+  return static_cast<float>(v);
 }
 [[nodiscard]] constexpr float operator""_bpm(unsigned long long v) noexcept {
-    return static_cast<float>(v);
+  return static_cast<float>(v);
+}
+
+[[nodiscard]] constexpr float operator""_s(long double v) noexcept {
+  return static_cast<float>(v);
 }
 [[nodiscard]] constexpr float operator""_s(unsigned long long v) noexcept {
-    return static_cast<float>(v);
+  return static_cast<float>(v);
 }
-[[nodiscard]] constexpr float operator""_ms(unsigned long long v) noexcept {
-    return static_cast<float>(v / 1000ULL);
+
+[[nodiscard]] constexpr float operator""_db(long double v) noexcept {
+  return static_cast<float>(v);
+}
+[[nodiscard]] constexpr float operator""_db(unsigned long long v) noexcept {
+  return static_cast<float>(v);
 }
 
 }  // namespace literals

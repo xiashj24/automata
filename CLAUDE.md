@@ -110,8 +110,7 @@ When adding new features, study the submodules in `external/` for prior art and 
 - **`isobar/`** — Python music pattern library; reference for pattern and sequencing abstractions
 - **`signalflow/`** — Python/C++ signal processing framework; reference for graph-based DSP
 - **`strudel/`** — browser-based live coding (TidalCycles port); reference for pattern syntax and mini-notation
-- **`uSEQ/`** — FRP-based live-coding Eurorack sequencer (RP2040, ModuLisp DSL); reference for explicit node-DAG compilation (CSE, constant folding, topological sort), declared cross-sample state (`defstate`/`integrate`/UGens), zero-allocation flat-array hot path, and live recompilation with last-known-good fallback. Targets Workshop Computer hardware.
-- **`Workshop_Computer/`** — Music Thing Modular Workshop Computer SDK; the target CV output hardware. RP2040, ComputerCard C++ framework (header-only, MIT). I/O: 2× audio ±6V 12-bit (MCP4822 SPI DAC), 2× CV ±6V 12-bit/19-bit sigma-delta (PWM), 2× pulse (5–6V gate). UAC 1.0 USB audio firmware exists (`releases/06_usb_audio`). See also `Demonstrations+HelloWorlds/AI/WORKSHOP_COMPUTER_AI_DIRECTIVE.md` for hardware errata and DSP guidance.
+- **`uSEQ/`** — FRP-based live-coding Eurorack sequencer (RP2040, ModuLisp DSL); reference for explicit node-DAG compilation (CSE, constant folding, topological sort), declared cross-sample state (`defstate`/`integrate`/UGens), zero-allocation flat-array hot path, and live recompilation with last-known-good fallback.
 
 ### Tests
 
@@ -131,19 +130,7 @@ Automata is intended to become the backend of a generative music DSL. The DSL wi
 
 ### CV output
 
-CV signals are modelled as additional `Stream` outputs alongside audio — same type, different sink. The PC sends CV as USB audio channels; the target device receives samples and clocks them to an external DAC.
-
-Target hardware options, in order of preference:
-
-| Device | USB Audio | MCU | Notes |
-|---|---|---|---|
-| **Teensy 4.1** | UAC 2.0 (HS) | i.MX RT1062, 600 MHz M7 | Easiest path — Teensy Audio Library has USB audio device out of the box |
-| **Electrosmith Daisy Seed** | UAC 2.0 (HS) | STM32H750, 480 MHz M7 | Purpose-built audio platform; LibDaisy audio callback mirrors automata's render loop. Option to run light DSP locally in future. |
-| **Raspberry Pi Pico 2 W** | UAC 1.0 (FS) | RP2350, 150 MHz M33 | Cheapest; 48 kHz 16-bit sufficient for control-rate CV, but no audio-rate modulation |
-
-UAC 2.0 (requires USB High Speed) enables audio-rate CV (192 kHz update rate, 32-bit resolution) — useful for oscillator FM and waveshaping via CV. UAC 1.0 is limited to control-rate signals but is adequate for pitch, gates, and slow modulation.
-
-Running the DSP backend on any of these MCUs is **not** the target: `shared_ptr`, `move_only_function`, `vector`, and `thread_local` all require hosted-environment rework. These devices are CV peripherals, not DSP engines.
+CV signals are modelled as additional `Stream` outputs alongside audio — same type, different sink. Microcontroller CV output is not a current target; the DSP backend runs on the host PC only.
 
 ### Live coding
 
@@ -168,3 +155,30 @@ Only add `mutable` to a lambda when a captured-by-value variable is directly wri
 ### `constexpr` limits
 
 `std::pow` and `std::log` are not `constexpr` until C++26, so `note_to_frequency` and `frequency_to_note` cannot be `constexpr` yet. Functions that construct `Stream` (which uses `shared_ptr` + `std::move_only_function`) cannot be `constexpr`.
+
+### Realtime safety rules
+
+The audio callback must never allocate or free heap memory. Rules by category:
+
+**Bounded delay lines** (`delay_n`, `allpass_delay`, `karplus_strong`): use `std::array<float, MaxDelaySamples>` (4096 samples, ~85 ms at 48 kHz, defined in `samplerate.hpp`) inside a plain `State` struct. Initialise with `st = State{}` directly in the lambda capture — no pre-fill step, no `std::move` needed.
+
+```cpp
+struct State { std::array<float, MaxDelaySamples> buf{}; std::size_t pos = 0; };
+return Stream([x, sz, st = State{}]() mutable -> float { ... });
+```
+
+**Variable-length delay lines** (`comb_n`): accept a `max_delay_s` construction parameter, pre-allocate a `std::vector` to that size outside the lambda, then move it in. The callback clamps the runtime delay to `max_samples - 1` and never calls `resize`.
+
+```cpp
+std::vector<float> buf(max_samples, 0.f);
+return Stream([..., buf = std::move(buf)]() mutable -> float { ... });
+```
+
+**Long analysis windows** (`rms`): window size can reach tens of thousands of samples — a fixed array is impractical. Keep `std::vector`, pre-fill it before the lambda, and move it in with `std::move`. No resize inside the lambda.
+
+```cpp
+State st; st.buf.assign(n, 0.f);
+return Stream([x, n, st = std::move(st)]() mutable -> float { ... });
+```
+
+**No extra `shared_ptr` on State**: `Stream` already owns the callable via `shared_ptr<State>` internally. Wrapping `State` in a second `shared_ptr` (e.g. `make_shared<State>()`) adds double-indirection with no benefit — capture `State` by value. Exception: `Delay` (`delay.hpp`) intentionally uses `shared_ptr<float>` so two lambda captures in a recursive patch share the same one-sample register.

@@ -8,7 +8,8 @@
 using automata::Graph;
 using Catch::Approx;
 
-TEST_CASE("Graph: output_count and param_count reflect build phase", "[graph]") {
+TEST_CASE("Graph: output_count and param_count reflect build phase",
+          "[graph]") {
   Graph g;
   REQUIRE(g.output_count() == 0);
   REQUIRE(g.param_count() == 0);
@@ -20,7 +21,8 @@ TEST_CASE("Graph: output_count and param_count reflect build phase", "[graph]") 
   REQUIRE(g.output_count() == 1);
 }
 
-TEST_CASE("Graph: render produces expected samples for constant output", "[graph]") {
+TEST_CASE("Graph: render produces expected samples for constant output",
+          "[graph]") {
   Graph g;
   g.add_output("main", 0.25f);
 
@@ -58,7 +60,8 @@ TEST_CASE("Graph: lkg out-of-range returns 0", "[graph]") {
   REQUIRE(g.lkg(99) == Approx(0.f));
 }
 
-TEST_CASE("Graph: Param drives output via implicit Stream conversion", "[graph]") {
+TEST_CASE("Graph: Param drives output via implicit Stream conversion",
+          "[graph]") {
   Graph g;
   auto& gain = g.make_param("gain", 0.5f, 0.f, 1.f);
   g.add_output("main", automata::Stream(gain) * 1.f);
@@ -80,6 +83,8 @@ TEST_CASE("Graph: render_multi fills separate buffers per output", "[graph]") {
   std::array<float, 4> buf1{}, buf2{};
   g.render_multi({buf1, buf2});
 
-  for (float v : buf1) REQUIRE(v == Approx(0.1f));
-  for (float v : buf2) REQUIRE(v == Approx(0.9f));
+  for (float v : buf1)
+    REQUIRE(v == Approx(0.1f));
+  for (float v : buf2)
+    REQUIRE(v == Approx(0.9f));
 }

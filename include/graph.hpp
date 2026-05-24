@@ -32,7 +32,7 @@ private:
   std::shared_ptr<std::atomic<float>> slot;
 
   std::string name;
-  float min_val, max_val;
+  [[maybe_unused]] float min_val, max_val;
 };
 
 class Graph {

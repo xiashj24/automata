@@ -1,12 +1,12 @@
+#define NOMINMAX
+#define MA_IMPLEMENTATION
+#include <miniaudio.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <print>
-
-#define NOMINMAX
-#define MA_IMPLEMENTATION
-#include <miniaudio.h>
 
 #include <graph.hpp>
 #include <samplerate.hpp>

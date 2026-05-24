@@ -1,8 +1,5 @@
-# TODO
+# unit generators
 
-- extend Stream type to do more things
-- construct stream from a list of numbers
-- sequencer
 - function generator
 - shift register
 - geiger counter
@@ -12,9 +9,10 @@
 
 # framework
 
-- visualize signal and internal states (imgui)
-- tweak parameters by slider
+- tweak parameters by imgui slider
     - imgui SliderFloat <-> local float -> Stream (next() just return the bounded float value)
-    - thread safety?
-- figure out how to do jit
+- imgui scope
+- figure out how to do live coding
+- audio file i/o
+- offline rendering
 
