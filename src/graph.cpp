@@ -342,7 +342,7 @@ Stream patch_ritusen() {
   auto ritu_octave = xchoose({36, 48, 60}, clock, 2);
   auto ritu_notes = note_to_frequency(scale<ritusen>(ritu_degree, ritu_octave));
   auto ritu_cutoff = rand_exp(200, 15000, clock.trigger(), 3);
-  return svf_lp(saw(ritu_notes), ritu_cutoff, 0.3) * 0.25;
+  return svf_lp(saw(ritu_notes), ritu_cutoff, 0.3f).gain(-12_db);
 }
 
 // sc ch8_26: FM synthesis with hex_major6 scale, sequenced index and ratio
@@ -353,7 +353,7 @@ Stream patch_fm_scale() {
   auto fm_octave = choose({48, 60, 72}, fm_clock, 2);
   auto fm_notes = note_to_frequency(scale<hex_major6>(fm_degree, fm_octave));
   auto fm_index = choose({0, 1, 10, 40}, fm_clock, 3);
-  return simple_fm(fm_notes, fm_index) * 0.3;
+  return simple_fm(fm_notes, fm_index).gain(-12_db);
 }
 
 // Stochastic Garden: evolving ambient patch that exercises every new UGen.
@@ -416,16 +416,16 @@ Stream patch_stochastic_garden() {
   // ── Side-chain duck ───────────────────────────────────────────────────
   // rms + amp_to_db measures bass level; lin_lin maps it to a duck gain
   auto bass_db = amp_to_db(rms(bass, 0.04f));
-  auto duck = lin_lin(bass_db, -36.f, -6.f, 1.f, 0.25f);
+  auto duck = lin_lin(bass_db, -36_db, -6_db, 1.f, 0.25f);
 
   // ── Mix ───────────────────────────────────────────────────────────────
-  auto mix = bass * db_to_amp(-4.f) + mel * db_to_amp(-10.f) +
-             perc * db_to_amp(-13.f) + pad * duck * db_to_amp(-5.f);
+  auto mix = bass.gain(-4_db) + mel.gain(-10_db) + perc.gain(-13_db) +
+             (pad * duck).gain(-5_db);
   return compressor(mix, -18.f, 3.f, 0.008f, 0.12f);
 }
 
 }  // namespace
 
 void define_graph(Graph& g) {
-  g.add_output("main", patch_piano_phase());
+  g.add_output("main", patch_fm_scale());
 }
