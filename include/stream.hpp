@@ -24,14 +24,14 @@ inline thread_local uint64_t current_tick = 0;
  */
 class Stream {
   struct State {
-    std::function<float()> gen;
+    std::move_only_function<float()> gen;
     float cache_val = 0.f;
     uint64_t cache_tick = ~0ull;
   };
   std::shared_ptr<State> state;
 
 public:
-  explicit Stream(std::function<float()> gen)
+  explicit Stream(std::move_only_function<float()> gen)
       : state(std::make_shared<State>(State{std::move(gen)})) {}
   // cppcheck-suppress noExplicitConstructor
   Stream(float v) : Stream([v]() -> float { return v; }) {}
