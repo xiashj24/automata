@@ -19,9 +19,6 @@
 [submodule "external/sc-book-examples"]
 	path = external/sc-book-examples
 	url = https://github.com/tado/sc-book-examples
-[submodule "external/Workshop_Computer"]
-	path = external/Workshop_Computer
-	url = https://github.com/TomWhitwell/Workshop_Computer
 [submodule "external/uSEQ"]
 	path = external/uSEQ
 	url = https://github.com/Emute-Lab-Instruments/uSEQ
