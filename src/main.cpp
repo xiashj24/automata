@@ -1,23 +1,49 @@
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <print>
 
+#define NOMINMAX
 #define MA_IMPLEMENTATION
 #include <miniaudio.h>
 
 #include <graph.hpp>
 #include <samplerate.hpp>
 
-constexpr int frame_count = 256;
+// ─── Graph runtime
+// ────────────────────────────────────────────────────────────
+
+namespace {
+
+std::shared_ptr<automata::Graph> build_graph() {
+  auto g = std::make_shared<automata::Graph>();
+  define_graph(*g);
+  return g;
+}
+
+std::atomic<std::shared_ptr<automata::Graph>> live_graph{build_graph()};
 
 void audio_callback(ma_device*,
                     void* output,
                     [[maybe_unused]] const void* input,
                     ma_uint32 frames) {
-  render({static_cast<float*>(output), frames});
+  live_graph.load(std::memory_order_acquire)
+      ->render({static_cast<float*>(output), frames});
 }
 
+}  // namespace
+
+// ─────────────────────────────────────────────────────────────────────────────
+constexpr int frame_count = 256;
+
 int main() {
+  {
+    auto g = live_graph.load(std::memory_order_acquire);
+    std::printf("graph: %zu params, %zu outputs\n", g->param_count(),
+                g->output_count());
+  }
+
   ma_device_config config = ma_device_config_init(ma_device_type_playback);
   config.playback.format = ma_format_f32;
   config.playback.channels = 1;

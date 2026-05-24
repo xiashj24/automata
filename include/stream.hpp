@@ -13,7 +13,6 @@
 
 namespace automata {
 
-// Incremented by Stream::render() before each sample
 inline thread_local uint64_t current_tick = 0;
 
 /**
@@ -50,12 +49,12 @@ public:
     return state->cache_val;
   }
 
-  void render(std::span<float> buf) const {
-    for (auto& s : buf) {
-      ++current_tick;
-      s = next();
-    }
-  }
+  // void render(std::span<float> buf) const {
+  //   for (auto& s : buf) {
+  //     ++current_tick;
+  //     s = next();
+  //   }
+  // }
 
   [[nodiscard]] Stream bipolar() const {
     return Stream([src = *this]() { return src.next() * 2.f - 1.f; });

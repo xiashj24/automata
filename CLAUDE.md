@@ -47,19 +47,59 @@ Oscillators and modulation functions (`osc`, `saw`, `sqr`, `sin`, `phasor`, `noi
 - `choose`, `xchoose`, `wchoose` → random selection
 - `euclid(hits, steps)` → stateless Euclidean rhythm as `vector<bool>`
 
+### Graph and parameters (`include/graph.hpp`)
+
+`Graph` is a named-port runtime container for a signal chain. It owns named output slots and controllable parameters, and is the unit of live swap. The DAG itself remains implicit — evaluation order and fan-out deduplication are handled by `Stream`'s pull-recursion and `cache_tick` mechanism. `Graph` adds named ports and hot-swap support on top of that, not explicit node/edge tracking.
+
+```cpp
+Graph g;
+auto& cutoff = g.make_param("cutoff", 2000.f, 20.f, 20000.f);
+g.add_output("main", svf_lp(saw(440_hz), cutoff, 0.3f) * 0.3f);
+g.render(buf);       // sums all outputs into buf
+g.render_multi(bufs); // one span per output, no summing
+```
+
+**`Param`** — a named, live-controllable `float` backed by `shared_ptr<atomic<float>>`. Implicitly converts to `Stream` so it is a drop-in wherever a `Stream` parameter is accepted. `set()` is safe to call from any thread; the audio thread reads with `memory_order_relaxed` (one-sample-late updates are acceptable).
+
+**`Graph::lkg(i)`** — returns the last sample rendered by output `i`. Intended for two future uses:
+1. **Live hot-reload crossfade**: when `live_graph` is atomically replaced, the incoming graph's first frame can be blended with `old_graph->lkg(i)` to avoid a single-buffer dropout.
+2. **UI metering**: a control panel can poll `lkg(i)` to display per-channel output levels without touching the audio thread (acceptable tearing for a meter).
+
+**Source layout**: `src/main.cpp` owns the audio device and graph runtime (`build_graph`, `live_graph`, `render`). `src/graph.cpp` contains only user signal-chain code — the single function `define_graph(Graph& g)`. Edit `graph.cpp` to change what plays.
+
+Patch functions in `graph.cpp` return `Stream` and can be mixed freely in `define_graph`:
+
+```cpp
+void define_graph(Graph& g) {
+  g.add_output("main", patch_basics() * 0.5f + patch_euclid() * 0.5f);
+}
+```
+
+Live graph swap from a REPL/DSL thread: `live_graph.store(build_graph(), memory_order_release)`. Graph swap resets all lambda-captured state (filter memory, oscillator phases). `lkg` bridges the single-buffer gap (~5 µs at 48 kHz). Full state continuity (named state slots surviving a swap) is deferred until the DSL interpreter is begun.
+
 ### DSP modules
 
 | Header | Contents |
 |--------|----------|
-| `filter.hpp` | `biquad`, state-variable filter (LP/BP/HP), `lag`, `slew` |
-| `envelope.hpp` | ASR envelope — `attack`, `sustain`, `release` durations |
+| `filter.hpp` | `biquad`, state-variable filter (LP/BP/HP), `lag`, `slew`, `one_pole` |
+| `envelope.hpp` | ASR envelope, `env_follow` (peak follower) |
+| `stream.hpp` | Oscillators, arithmetic ops, `toggle`, `count` |
 | `delay.hpp` | Single-sample feedback register (enables recursive/chaotic patches) |
 | `note_number.hpp` | MIDI note ↔ Hz conversion |
 | `units.hpp` | Literals: `440_hz`, `120_bpm`, `0.5_s` |
 
+Additional UGens ported from uSEQ (adapted from control-rate to fixed 48 kHz):
+
+| Function | Location | Description |
+|----------|----------|-------------|
+| `one_pole(x, cutoff_hz)` | `filter.hpp` | One-pole low-pass; wrapper around `lag` with Hz→coefficient conversion: `a = 1 - min(1, 2π·fc/SR)` |
+| `env_follow(x, attack_hz, release_hz)` | `envelope.hpp` | Peak follower — tracks envelope of `x` with asymmetric attack/release rates in Hz |
+| `toggle(trigger)` | `stream.hpp` | Flip-flop: output alternates 0↔1 on each rising edge of `trigger` |
+| `count(trigger, reset)` | `stream.hpp` | Rising-edge counter; resets to 0 on rising edge of `reset` |
+
 ### Executables
 
-**`automata-audio`** (`src/main.cpp` + `src/graph.cpp`): Real-time audio via miniaudio at 48 kHz, 256-frame callback. `graph.cpp` defines the audio graph — edit it to change what plays.
+**`automata-audio`** (`src/main.cpp` + `src/graph.cpp`): Real-time audio via miniaudio at 48 kHz, 256-frame callback. `graph.cpp` defines the audio graph — edit `define_graph` to change what plays.
 
 ### Reference implementations (`external/`)
 
@@ -76,6 +116,12 @@ When adding new features, study the submodules in `external/` for prior art and 
 ### Tests
 
 Uses Catch2 v3. Tests live in `test/` and favour `STATIC_REQUIRE` (constexpr checks). The `develop` preset enables cppcheck and cpplint.
+
+| File | Covers |
+|------|--------|
+| `math.test.cpp` | Constexpr math utilities |
+| `param.test.cpp` | `Param` construction, `set`/`get`, implicit `Stream` conversion, copy sharing |
+| `graph.test.cpp` | `Graph` output/param counts, constant-output render, multi-output summing, `lkg`, `render_multi` |
 
 ## Project direction
 
@@ -101,7 +147,7 @@ Running the DSP backend on any of these MCUs is **not** the target: `shared_ptr`
 
 ### Live coding
 
-The current architecture supports live graph swapping without structural changes. The root stream (`out`) can be wrapped in `std::atomic<std::shared_ptr<State>>` so the interpreter thread installs a new graph with one atomic store while the audio thread holds a snapshot for the duration of each render call. Controllable parameters are exposed as `std::atomic<float>` slots read by a stream closure (`memory_order_relaxed` is correct — one-sample-late updates are acceptable).
+The `Graph`/`Param` layer is implemented and ready. `live_graph` in `main.cpp` is `std::atomic<std::shared_ptr<Graph>>`; the audio thread loads a snapshot per callback and the interpreter/REPL thread stores a freshly-built graph atomically. `Param::set()` allows sub-graph parameter control without a full rebuild. `Graph::lkg(i)` provides the last-rendered sample per output for dropout-free crossfading on swap.
 
 ### Design decisions (do not revisit without measurement)
 
