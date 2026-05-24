@@ -18,7 +18,7 @@ public:
   }
 
   [[nodiscard]] Stream write(Stream src) const {
-    return Stream([src, reg = reg]() mutable -> float {
+    return Stream([src, reg = reg]() -> float {
       float v = src.next();
       *reg = v;
       return v;

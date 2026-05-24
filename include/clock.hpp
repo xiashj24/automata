@@ -7,14 +7,14 @@ namespace automata {
 
 class Clock {
 public:
-  Clock(float bpm, float rate) : bpm(bpm), rate(rate) {}
+  constexpr Clock(float bpm, float rate) : bpm(bpm), rate(rate) {}
 
-  [[nodiscard]] Clock at(float new_rate) const { return Clock(bpm, new_rate); }
+  [[nodiscard]] constexpr Clock at(float new_rate) const { return Clock(bpm, new_rate); }
 
-  [[nodiscard]] Clock operator*(float factor) const {
+  [[nodiscard]] constexpr Clock operator*(float factor) const {
     return Clock(bpm, rate * factor);
   }
-  [[nodiscard]] Clock operator/(float factor) const {
+  [[nodiscard]] constexpr Clock operator/(float factor) const {
     return Clock(bpm, rate / factor);
   }
   

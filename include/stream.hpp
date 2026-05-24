@@ -39,7 +39,7 @@ public:
   Stream(float* ptr) : Stream([ptr]() -> float { return *ptr; }) {}
   Stream(std::nullptr_t) = delete;
 
-  float next() {
+  float next() const {
     if (current_tick != 0 && state->cache_tick == current_tick)
       return state->cache_val;
     state->cache_val = state->gen();
@@ -47,7 +47,7 @@ public:
     return state->cache_val;
   }
 
-  void render(std::span<float> buf) {
+  void render(std::span<float> buf) const {
     for (auto& s : buf) {
       ++current_tick;
       s = next();
@@ -55,47 +55,45 @@ public:
   }
 
   [[nodiscard]] Stream bipolar() const {
-    return Stream([src = *this]() mutable { return src.next() * 2.f - 1.f; });
+    return Stream([src = *this]() { return src.next() * 2.f - 1.f; });
   }
   [[nodiscard]] Stream unipolar() const {
-    return Stream(
-        [src = *this]() mutable { return (src.next() + 1.f) * 0.5f; });
+    return Stream([src = *this]() { return (src.next() + 1.f) * 0.5f; });
   }
   [[nodiscard]] Stream exp2() const {
-    return Stream([src = *this]() mutable { return std::exp2(src.next()); });
+    return Stream([src = *this]() { return std::exp2(src.next()); });
   }
   [[nodiscard]] Stream vpow(float n) const {
-    return Stream(
-        [src = *this, n]() mutable { return std::pow(src.next(), n); });
+    return Stream([src = *this, n]() { return std::pow(src.next(), n); });
   }
 };
 
 // stream-stream arithmetic
 [[nodiscard]] inline Stream operator+(Stream lhs, Stream rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() + rhs.next(); });
+  return Stream([lhs, rhs]() { return lhs.next() + rhs.next(); });
 }
 [[nodiscard]] inline Stream operator-(Stream lhs, Stream rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() - rhs.next(); });
+  return Stream([lhs, rhs]() { return lhs.next() - rhs.next(); });
 }
 [[nodiscard]] inline Stream operator*(Stream lhs, Stream rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() * rhs.next(); });
+  return Stream([lhs, rhs]() { return lhs.next() * rhs.next(); });
 }
 [[nodiscard]] inline Stream operator/(Stream lhs, Stream rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() / rhs.next(); });
+  return Stream([lhs, rhs]() { return lhs.next() / rhs.next(); });
 }
 
 // stream-scalar arithmetic (scalar promotes to Stream via implicit constructor)
 [[nodiscard]] inline Stream operator+(Stream lhs, float rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() + rhs; });
+  return Stream([lhs, rhs]() { return lhs.next() + rhs; });
 }
 [[nodiscard]] inline Stream operator-(Stream lhs, float rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() - rhs; });
+  return Stream([lhs, rhs]() { return lhs.next() - rhs; });
 }
 [[nodiscard]] inline Stream operator*(Stream lhs, float rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() * rhs; });
+  return Stream([lhs, rhs]() { return lhs.next() * rhs; });
 }
 [[nodiscard]] inline Stream operator/(Stream lhs, float rhs) {
-  return Stream([lhs, rhs]() mutable { return lhs.next() / rhs; });
+  return Stream([lhs, rhs]() { return lhs.next() / rhs; });
 }
 [[nodiscard]] inline Stream operator+(float lhs, Stream rhs) {
   return rhs + lhs;
@@ -130,7 +128,7 @@ public:
 
 [[nodiscard]] inline Stream osc(Stream hz, Stream phase_mod = 0.f) {
   constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
-  return Stream([phase = phasor(hz / SampleRate), phase_mod]() mutable {
+  return Stream([phase = phasor(hz / SampleRate), phase_mod]() {
     return std::sin(two_pi * (phase.next() + phase_mod.next()));
   });
 }
@@ -211,7 +209,7 @@ public:
 
 // Soft saturator: x / (1 + |x|), maps R -> (-1, 1).
 [[nodiscard]] inline Stream distort(Stream x) {
-  return Stream([x]() mutable -> float {
+  return Stream([x]() -> float {
     float xn = x.next();
     return xn / (1.f + std::abs(xn));
   });
@@ -219,7 +217,7 @@ public:
 
 // Triangle oscillator: linear ramp -1→+1→-1 per cycle.
 [[nodiscard]] inline Stream tri(Stream hz) {
-  return Stream([ph = phasor(hz / SampleRate)]() mutable -> float {
+  return Stream([ph = phasor(hz / SampleRate)]() -> float {
     float p = ph.next();
     return p < 0.5f ? 4.f * p - 1.f : 3.f - 4.f * p;
   });
@@ -227,7 +225,7 @@ public:
 
 // Square oscillator: +1 for first `width` of period, -1 otherwise.
 [[nodiscard]] inline Stream sqr(Stream hz, Stream width = 0.5f) {
-  return Stream([ph = phasor(hz / SampleRate), width]() mutable -> float {
+  return Stream([ph = phasor(hz / SampleRate), width]() -> float {
     return ph.next() < width.next() ? 1.f : -1.f;
   });
 }
@@ -261,7 +259,7 @@ public:
   float log_lo = std::log(out_lo);
   float log_range = std::log(out_hi / out_lo);
   float in_range = in_hi - in_lo;
-  return Stream([src, in_lo, in_range, log_lo, log_range]() mutable -> float {
+  return Stream([src, in_lo, in_range, log_lo, log_range]() -> float {
     float t = std::clamp((src.next() - in_lo) / in_range, 0.f, 1.f);
     return std::exp(log_lo + t * log_range);
   });
@@ -270,7 +268,7 @@ public:
 // Wrap values into [lo, hi) with modular arithmetic.
 [[nodiscard]] inline Stream wrap(Stream src, float lo, float hi) {
   float range = hi - lo;
-  return Stream([src, lo, range]() mutable -> float {
+  return Stream([src, lo, range]() -> float {
     float v = std::fmod(src.next() - lo, range);
     if (v < 0.f)
       v += range;

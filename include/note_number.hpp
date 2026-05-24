@@ -10,8 +10,6 @@
 inline constexpr float A440Frequency = 440.0f;
 inline constexpr int A440NoteNumber = 69;
 
-// TODO: make these constexpr
-
 inline float note_to_frequency(int note) {
   return A440Frequency *
          std::pow(2.0f, (static_cast<float>(note) - A440NoteNumber) / 12.0f);
@@ -32,18 +30,18 @@ inline float frequency_to_note(float frequency) {
 struct NoteNumber {
   uint8_t note = 0;
 
-  operator uint8_t() const { return note; }
+  constexpr operator uint8_t() const { return note; }
 
-  auto operator<=>(const NoteNumber&) const = default;
+  constexpr auto operator<=>(const NoteNumber&) const = default;
 
   // Position within the octave: 0 (C) – 11 (B).
-  [[nodiscard]] int chromatic_index() const {
+  [[nodiscard]] constexpr int chromatic_index() const {
     return static_cast<int>(note % 12);
   }
 
   // Octave number.
   // octave_for_middle_c=3 gives Yamaha convention (middle C = C3).
-  [[nodiscard]] int octave_number(int octave_for_middle_c = 4) const {
+  [[nodiscard]] constexpr int octave_number(int octave_for_middle_c = 4) const {
     return note / 12 + (octave_for_middle_c - 5);
   }
 
@@ -52,17 +50,17 @@ struct NoteNumber {
   }
 
   // Note name with flats for accidentals (e.g. "Eb", "Bb").
-  [[nodiscard]] std::string_view name() const {
+  [[nodiscard]] constexpr std::string_view name() const {
     return std::addressof("C\0\0C#\0D\0\0Eb\0E\0\0F\0\0F#\0G\0\0G#\0A\0\0Bb\0B"
                               [static_cast<size_t>(3 * chromatic_index())]);
   }
 
-  [[nodiscard]] std::string_view name_with_sharps() const {
+  [[nodiscard]] constexpr std::string_view name_with_sharps() const {
     return std::addressof("C\0\0C#\0D\0\0D#\0E\0\0F\0\0F#\0G\0\0G#\0A\0\0A#\0B"
                               [static_cast<size_t>(3 * chromatic_index())]);
   }
 
-  [[nodiscard]] std::string_view name_with_flats() const {
+  [[nodiscard]] constexpr std::string_view name_with_flats() const {
     return std::addressof("C\0\0Db\0D\0\0Eb\0E\0\0F\0\0Gb\0G\0\0Ab\0A\0\0Bb\0B"
                               [static_cast<size_t>(3 * chromatic_index())]);
   }
@@ -72,16 +70,16 @@ struct NoteNumber {
   }
 
   // True for C D E F G A B; false for accidentals.
-  [[nodiscard]] bool is_natural() const {
+  [[nodiscard]] constexpr bool is_natural() const {
     return (0b101010110101 & (1 << chromatic_index())) != 0;
   }
 
-  [[nodiscard]] bool is_accidental() const { return !is_natural(); }
+  [[nodiscard]] constexpr bool is_accidental() const { return !is_natural(); }
 };
 
 [[nodiscard]] inline automata::Stream note_to_frequency(
     automata::Stream notes) {
-  return automata::Stream([notes]() mutable -> float {
+  return automata::Stream([notes]() -> float {
     return note_to_frequency(notes.next());
   });
 }

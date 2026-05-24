@@ -20,7 +20,7 @@ namespace detail {
 constexpr uint32_t lcg_mul = 196314165u;
 constexpr uint32_t lcg_add = 907633515u;
 
-inline uint32_t lcg_next(uint32_t state) {
+constexpr uint32_t lcg_next(uint32_t state) {
   return state * lcg_mul + lcg_add;
 }
 
@@ -67,7 +67,7 @@ struct LSystemExpander {
 };
 
 // Pick a random index in [0, n).
-inline std::size_t lcg_index(uint32_t state, std::size_t n) {
+constexpr std::size_t lcg_index(uint32_t state, std::size_t n) {
   return static_cast<std::size_t>(
       (static_cast<uint64_t>(state) * static_cast<uint64_t>(n)) >> 32);
 }
@@ -249,7 +249,7 @@ constexpr int semitones(int d) {
 
 template <Scale S>
 [[nodiscard]] inline Stream scale(Stream degrees, Stream root = 0.f) {
-  return Stream([degrees, root]() mutable -> float {
+  return Stream([degrees, root]() -> float {
     int d = static_cast<int>(std::round(degrees.next()));
     return static_cast<float>(detail::semitones<S>(d)) + root.next();
   });
