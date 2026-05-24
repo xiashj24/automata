@@ -11,7 +11,7 @@
 
 #include <euclid.hpp>
 #include <stream.hpp>
-#include <tempo.hpp>
+#include <clock.hpp>
 
 namespace automata {
 
