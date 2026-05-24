@@ -41,14 +41,14 @@ Stream arp_voice(Clock beat,
 // {LocalOut.ar(a=CombN.ar(BPF.ar(LocalIn.ar(2)*7.5+Saw.ar([32,33],0.2),2**LFNoise0.kr(4/3,4)*300,0.1).distort,2,2,40));a}.play
 // it sounded completely different...
 
-Delay out_z;
-auto saw_osc = (saw(32_hz) + saw(33_hz)) * 0.1f;
-auto mix = out_z.read() * 7.5f + saw_osc;
-auto freq = (lf_noise_0(1.33_hz) * 4.f).exp2() * 300.f;
-auto filtered = svf_bp(mix, freq, 0.9f);
-auto clipped = distort(filtered);
-auto comb = comb_n(clipped, 2_s, 40_s);
-auto out = out_z.write(comb);
+// Delay out_z;
+// auto saw_osc = (saw(32_hz) + saw(33_hz)) * 0.1f;
+// auto mix = out_z.read() * 7.5f + saw_osc;
+// auto freq = (lf_noise_0(1.33_hz) * 4.f).exp2() * 300.f;
+// auto filtered = svf_bp(mix, freq, 0.9f);
+// auto clipped = distort(filtered);
+// auto comb = comb_n(clipped, 2_s, 40_s);
+// auto out = out_z.write(comb);
 
 // 00
 // auto notes = range(60, 73, 1, Clock(120_bpm, 4.f));
@@ -87,12 +87,12 @@ auto out = out_z.write(comb);
 // auto out = (simple_fm(pitch, 1.5f) + simple_fm(pitch_lo, 2.f)) * 0.2f;
 
 // 05 - isobar ex-piano-phase (Steve Reich, 1967)
-// Clock beat(160_bpm, 8);
-// const std::vector<float> piano_phase = {-7, -5, 0, 2,  3, -5,
-//                                         -7, 2,  0, -5, 3, 2};
-// auto voice1 = note_to_frequency(seq(piano_phase, beat) + 60);
-// auto voice2 = note_to_frequency(seq(piano_phase, beat / 1.01f) + 72);
-// auto out = (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f)) * 0.3f;
+Clock beat(160_bpm, 8);
+const std::vector<float> piano_phase = {-7, -5, 0, 2,  3, -5,
+                                        -7, 2,  0, -5, 3, 2};
+auto voice1 = note_to_frequency(seq(piano_phase, beat) + 60);
+auto voice2 = note_to_frequency(seq(piano_phase, beat / 1.01f) + 72);
+auto out = (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f)) * 0.3f;
 
 // 06 - isobar ex-walk
 // Clock beat(170_bpm, 16);

@@ -40,7 +40,9 @@ public:
   Stream(std::nullptr_t) = delete;
 
   float next() const {
-    if (current_tick != 0 && state->cache_tick == current_tick)
+    if (current_tick == 0)
+      return state->gen();
+    if (state->cache_tick == current_tick)
       return state->cache_val;
     state->cache_val = state->gen();
     state->cache_tick = current_tick;

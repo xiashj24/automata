@@ -26,7 +26,10 @@ Other useful presets: `ninja-multi-asan` (AddressSanitizer + UBSan), `ninja-mult
 `Stream` is the central type — a ref-counted, lazy `float()` generator. Key properties:
 - Copies share the same generator (`shared_ptr<State>`); copying is O(1)
 - Within a single sample tick, `next()` evaluates at most once (cached by `current_tick`), so a stream can be fanned out to multiple consumers without double-evaluation
-- `render(span<float>)` increments `current_tick` and fills a buffer — this is the audio callback entry point
+- `render(span<float>) const` increments `current_tick` and fills a buffer — this is the audio callback entry point
+- Both `next()` and `render()` are `const` — mutation goes through `shared_ptr<State>`, not the `Stream` object itself
+- `current_tick == 0` means outside a render context: `next()` always recomputes and never writes to the cache, so stateful streams (phasors, LCGs) advance correctly when called directly in tests
+- `State::gen` is `std::move_only_function<float()>` — do not regress to `std::function`
 
 Oscillators and modulation functions (`osc`, `saw`, `sqr`, `sin`, `phasor`, `noise`, `lin_exp`) return `Stream` and compose with `+`, `-`, `*`, `/`.
 
@@ -78,3 +81,11 @@ Uses Catch2 v3. Tests live in `test/` and favour `STATIC_REQUIRE` (constexpr che
 - No single-letter variable names except conventional ones (`x`, `y`, `z`, `i`); do not abbreviate (e.g. no `rhy` for rhythm)
 - No trailing underscores on private member variables
 - All new DSP/signal code returns `Stream` and composes functionally — avoid stateful objects except where a delay register is semantically required
+
+### `mutable` on lambdas
+
+Only add `mutable` to a lambda when a captured-by-value variable is directly written to (e.g. a phase accumulator, a filter state, an LCG seed). Do **not** add `mutable` just to call `Stream::next()` — it is `const`. Lambdas that are pure mappings over streams (arithmetic operators, waveshapers, converters) should have no `mutable`.
+
+### `constexpr` limits
+
+`std::pow` and `std::log` are not `constexpr` until C++26, so `note_to_frequency` and `frequency_to_note` cannot be `constexpr` yet. Functions that construct `Stream` (which uses `shared_ptr` + `std::move_only_function`) cannot be `constexpr`.
