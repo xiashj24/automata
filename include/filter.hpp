@@ -56,6 +56,17 @@ struct BiquadCoeffs {
   });
 }
 
+// One-pole low-pass filter parameterized by cutoff frequency in Hz.
+// Converts cutoff to the lag coefficient: a = 1 - 2π·fc/SR, then delegates to
+// lag.
+[[nodiscard]] inline Stream one_pole(Stream x, Stream cutoff_hz) {
+  constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
+  return lag(x, Stream([cutoff_hz]() -> float {
+               return 1.f -
+                      std::min(1.f, two_pi * cutoff_hz.next() / SampleRate);
+             }));
+}
+
 namespace detail {
 
 enum class SvfMode { Lowpass, Bandpass, Highpass };
@@ -80,7 +91,8 @@ template <SvfMode Mode>
     if constexpr (Mode == SvfMode::Lowpass)
       return lp;
     else if constexpr (Mode == SvfMode::Bandpass)
-      return bp * r2;  // normalize to unity peak gain (SVF BP peaks at Q = 1/r2)
+      return bp *
+             r2;  // normalize to unity peak gain (SVF BP peaks at Q = 1/r2)
     else
       return hp;
   });
@@ -100,25 +112,27 @@ template <SvfMode Mode>
 
 // Non-interpolating delay line with no feedback.
 [[nodiscard]] inline Stream delay_n(Stream x, float delay_s) {
-  std::size_t delay_samples =
-      static_cast<std::size_t>(delay_s * SampleRate);
+  std::size_t delay_samples = static_cast<std::size_t>(delay_s * SampleRate);
   std::vector<float> buf(delay_samples + 1, 0.f);
-  return Stream([x, buf = std::move(buf),
-                 write_pos = std::size_t(0)]() mutable -> float {
-    std::size_t sz = buf.size();
-    std::size_t read_pos = (write_pos + 1u) % sz;
-    float delayed = buf[read_pos];
-    buf[write_pos] = x.next();
-    write_pos = (write_pos + 1u) % sz;
-    return delayed;
-  });
+  return Stream(
+      [x, buf = std::move(buf), write_pos = std::size_t(0)]() mutable -> float {
+        std::size_t sz = buf.size();
+        std::size_t read_pos = (write_pos + 1u) % sz;
+        float delayed = buf[read_pos];
+        buf[write_pos] = x.next();
+        write_pos = (write_pos + 1u) % sz;
+        return delayed;
+      });
 }
 
-// Non-interpolating feedback comb filter. Matches SC's CombN.ar(in, delay, decay).
-// Feedback coefficient: exp(log(0.001) * delay / decay) — 60dB decay in `decay` seconds.
-// Buffer grows on first call and whenever delay_time increases.
-// State is held behind a shared_ptr so copies of the Stream share the same buffer.
-[[nodiscard]] inline Stream comb_n(Stream x, Stream delay_time, Stream decay_time) {
+// Non-interpolating feedback comb filter. Matches SC's CombN.ar(in, delay,
+// decay). Feedback coefficient: exp(log(0.001) * delay / decay) — 60dB decay in
+// `decay` seconds. Buffer grows on first call and whenever delay_time
+// increases. State is held behind a shared_ptr so copies of the Stream share
+// the same buffer.
+[[nodiscard]] inline Stream comb_n(Stream x,
+                                   Stream delay_time,
+                                   Stream decay_time) {
   struct State {
     std::vector<float> buf;
     std::size_t write_pos = 0;
@@ -132,7 +146,8 @@ template <SvfMode Mode>
     if (needed > state->buf.size())
       state->buf.resize(needed, 0.f);
     float feedback = std::exp(std::log(0.001f) * dt / std::abs(dcy));
-    if (dcy < 0.f) feedback = -feedback;
+    if (dcy < 0.f)
+      feedback = -feedback;
     std::size_t sz = state->buf.size();
     std::size_t read_pos = (state->write_pos + sz - delay_samples) % sz;
     float yn = x.next() + feedback * state->buf[read_pos];

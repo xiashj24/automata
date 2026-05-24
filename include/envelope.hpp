@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
+#include <numbers>
 
 #include <samplerate.hpp>
 #include <stream.hpp>
@@ -35,6 +37,19 @@ namespace automata {
     }
     ++phase;
     return level;
+  });
+}
+
+// Envelope follower: tracks the amplitude of x with separate attack and release rates.
+// attack_hz / release_hz are tracking speeds in Hz (higher = faster response).
+[[nodiscard]] inline Stream env_follow(Stream x, Stream attack_hz, Stream release_hz) {
+  constexpr float two_pi = 2.f * std::numbers::pi_v<float>;
+  return Stream([x, attack_hz, release_hz, state = 0.f]() mutable -> float {
+    float abs_in = std::abs(x.next());
+    float rate = abs_in > state ? attack_hz.next() : release_hz.next();
+    float alpha = std::min(1.f, two_pi * rate / SampleRate);
+    state += alpha * (abs_in - state);
+    return state;
   });
 }
 

@@ -279,4 +279,31 @@ public:
   });
 }
 
+// Flip-flop: output alternates between 0 and 1 on each rising edge of trigger.
+[[nodiscard]] inline Stream toggle(Stream trigger) {
+  return Stream([trigger, state = 0.f, prev = 0.f]() mutable -> float {
+    float curr = trigger.next();
+    if (prev < 0.5f && curr >= 0.5f)
+      state = state > 0.5f ? 0.f : 1.f;
+    prev = curr;
+    return state;
+  });
+}
+
+// Counter: increments on each rising edge of trigger, resets to 0 on rising edge of reset.
+[[nodiscard]] inline Stream count(Stream trigger, Stream reset = 0.f) {
+  return Stream([trigger, reset, state = 0.f, prev_trig = 0.f,
+                 prev_reset = 0.f]() mutable -> float {
+    float curr_trig = trigger.next();
+    float curr_reset = reset.next();
+    if (prev_reset < 0.5f && curr_reset >= 0.5f)
+      state = 0.f;
+    else if (prev_trig < 0.5f && curr_trig >= 0.5f)
+      state += 1.f;
+    prev_trig = curr_trig;
+    prev_reset = curr_reset;
+    return state;
+  });
+}
+
 }  // namespace automata
