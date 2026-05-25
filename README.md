@@ -86,11 +86,11 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 ## related projects
 
 - [sapf: Sound As Pure Form](https://github.com/lfnoise/sapf) and SuperCollider
+- isobar and signalflow
+- (Rust) fundsp and lapis
 - tidal cycles and [strudel](https://strudel.cc/)
 - ORCA
-- isobar and signalflow
 - [Klang](https://github.com/nashaudio/klang)
-    - the idea of using c++ to express signal flow is interesting
 - [Reactable](https://reactable.com/)
 - Faust
 - Bespoke Synth
