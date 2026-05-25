@@ -22,3 +22,6 @@
 [submodule "external/uSEQ"]
 	path = external/uSEQ
 	url = https://github.com/Emute-Lab-Instruments/uSEQ
+[submodule "external/klang"]
+	path = external/klang
+	url = https://github.com/nashaudio/klang
