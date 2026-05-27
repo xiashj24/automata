@@ -14,6 +14,10 @@
 #include <random.hpp>
 #include <stream.hpp>
 #include <units.hpp>
+#include <v2/clock.hpp>
+#include <v2/node.hpp>
+#include <v2/osc.hpp>
+#include <v2/pattern.hpp>
 
 using namespace automata;
 using namespace literals;
@@ -81,8 +85,10 @@ Stream patch_sc_comb() {
 }
 
 Stream patch_fm() {
+  namespace v2 = automata::v2;
   auto notes = range(60, 73, 1, Clock(120_bpm, 4));
-  return simple_fm(note_to_frequency(notes), 1.f);
+  v2::Signal freq = v2::from_stream(note_to_frequency(notes));
+  return v2::simple_fm(freq, 1.f).to_stream();
 }
 
 // isobar ex-basics
@@ -132,6 +138,19 @@ Stream patch_piano_phase() {
   auto voice1 = note_to_frequency(seq(piano_phase, beat) + 60);
   auto voice2 = note_to_frequency(seq(piano_phase, beat / 1.01f) + 72);
   return (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f)).gain(-18_db);
+}
+
+Stream patch_piano_phase_v2() {
+  using namespace v2;
+  const std::vector<float> piano_phase = {-7, -5, 0, 2,  3, -5,
+                                          -7, 2,  0, -5, 3, 2};
+  auto beat1 = clock(160.f, 8.f);
+  auto beat2 = impulse(160.f * 8.f / (240.f * 1.01f));
+  auto voice1 = note_to_frequency(seq(piano_phase, beat1) + 60.f);
+  auto voice2 = note_to_frequency(seq(piano_phase, beat2) + 72.f);
+  return (simple_fm(voice1, 1.f) + simple_fm(voice2, 1.f))
+      .to_stream()
+      .gain(-18_db);
 }
 
 // isobar ex-walk
@@ -427,5 +446,5 @@ Stream patch_stochastic_garden() {
 }  // namespace
 
 void define_graph(Graph& g) {
-  g.add_output("main", patch_fm_scale());
+  g.add_output("main", patch_piano_phase_v2());
 }

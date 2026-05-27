@@ -2,6 +2,7 @@
 #define MA_IMPLEMENTATION
 #include <miniaudio.h>
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -22,13 +23,15 @@ std::shared_ptr<automata::Graph> build_graph() {
   return g;
 }
 
-std::atomic<std::shared_ptr<automata::Graph>> live_graph{build_graph()};
+// std::atomic<std::shared_ptr<T>> (C++20 partial specialization) is not yet
+// implemented in this libc++ version; use the lock-based free-function API.
+std::shared_ptr<automata::Graph> live_graph{build_graph()};
 
 void audio_callback(ma_device*,
                     void* output,
                     [[maybe_unused]] const void* input,
                     ma_uint32 frames) {
-  live_graph.load(std::memory_order_acquire)
+  std::atomic_load_explicit(&live_graph, std::memory_order_acquire)
       ->render({static_cast<float*>(output), frames});
 }
 
@@ -39,7 +42,7 @@ constexpr int frame_count = 256;
 
 int main() {
   {
-    auto g = live_graph.load(std::memory_order_acquire);
+    auto g = std::atomic_load_explicit(&live_graph, std::memory_order_acquire);
     std::printf("graph: %zu params, %zu outputs\n", g->param_count(),
                 g->output_count());
   }

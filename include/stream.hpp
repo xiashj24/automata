@@ -24,14 +24,14 @@ inline thread_local uint64_t current_tick = 0;
 class Stream {
 private:
   struct State {
-    std::move_only_function<float()> gen;
+    std::function<float()> gen;
     float cache_val = 0.f;
     uint64_t cache_tick = ~0ull;
   };
   std::shared_ptr<State> state;
 
 public:
-  explicit Stream(std::move_only_function<float()> gen)
+  explicit Stream(std::function<float()> gen)
       : state(std::make_shared<State>(State{std::move(gen)})) {}
   // cppcheck-suppress noExplicitConstructor
   Stream(float v) : Stream([v]() -> float { return v; }) {}
@@ -143,7 +143,6 @@ public:
   return phasor(hz / SampleRate).bipolar();
 }
 
-
 // Soft saturator: x / (1 + |x|), maps R -> (-1, 1).
 [[nodiscard]] inline Stream distort(Stream x) {
   return Stream([x]() -> float {
@@ -229,7 +228,8 @@ public:
   });
 }
 
-// Counter: increments on each rising edge of trigger, resets to 0 on rising edge of reset.
+// Counter: increments on each rising edge of trigger, resets to 0 on rising
+// edge of reset.
 [[nodiscard]] inline Stream count(Stream trigger, Stream reset = 0.f) {
   return Stream([trigger, reset, state = 0.f, prev_trig = 0.f,
                  prev_reset = 0.f]() mutable -> float {
