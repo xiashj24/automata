@@ -25,3 +25,6 @@
 [submodule "external/klang"]
 	path = external/klang
 	url = https://github.com/nashaudio/klang
+[submodule "external/cmajor"]
+	path = external/cmajor
+	url = https://github.com/cmajor-lang/cmajor
