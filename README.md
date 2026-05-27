@@ -73,6 +73,7 @@ A minimal, RPN-based, feedback-capable interpreted music language, designed for 
 - [Bret Victor: Inventing on Principle](https://www.youtube.com/watch?v=PUv66718DII)
     - https://thebookofshaders.com/edit.php
     - shadertoy
+- [Bret Victor - Media for Thinking the Unthinkable](https://www.youtube.com/watch?v=oUaOucZRlmE&t=25s)
 - number theory, combinitorial mathematics, and pseudo-random number generators
 - [Algorithmic Pattern project](https://algorithmicpattern.org/) by Alex Mclean
 - music theory: son clave, tresillo, world music
