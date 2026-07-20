@@ -4,8 +4,10 @@
 
 // Oscillator kernels (ADR 0005): self-contained, trivially copyable, no
 // engine types. Frequencies are normalized (cycles per sample); factories do
-// the Hz conversion. Naive waveforms for now — band-limiting is vocabulary
-// work, not machinery work.
+// the Hz conversion. Waveforms are stateless phase shapers composed over
+// Phasor, so the phase accumulator lives in one kernel and a waveform edit
+// preserves it (ADR 0005). Naive shapes for now — band-limiting is
+// vocabulary work, not machinery work.
 
 namespace automata {
 
@@ -27,42 +29,21 @@ private:
   float w_ = 0.f;
 };
 
-class Sine {
+class SineShaper {
 public:
-  void set_freq(float cycles_per_sample) { w_ = cycles_per_sample; }
+  [[nodiscard]] float process(float phase) { return std::sin(TwoPi * phase); }
 
-  [[nodiscard]] float process() {
-    const float out = std::sin(TwoPi * p_);
-    p_ += w_;
-    p_ -= std::floor(p_);
-    return out;
-  }
-
-  void reset() { *this = Sine{}; }
+  void reset() {}
 
 private:
   static constexpr float TwoPi = 6.28318530717958647692f;
-
-  float p_ = 0.f;
-  float w_ = 0.f;
 };
 
-class Saw {
+class SawShaper {
 public:
-  void set_freq(float cycles_per_sample) { w_ = cycles_per_sample; }
+  [[nodiscard]] float process(float phase) { return 2.f * phase - 1.f; }
 
-  [[nodiscard]] float process() {
-    const float out = 2.f * p_ - 1.f;
-    p_ += w_;
-    p_ -= std::floor(p_);
-    return out;
-  }
-
-  void reset() { *this = Saw{}; }
-
-private:
-  float p_ = 0.f;
-  float w_ = 0.f;
+  void reset() {}
 };
 
 // Single-sample impulse train; fires on its first sample so a downstream

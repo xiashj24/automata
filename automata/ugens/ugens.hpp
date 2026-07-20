@@ -40,13 +40,17 @@ inline Signal operator-(Signal a) {
 }
 
 [[nodiscard]] inline Signal sine(Signal freq_hz) {
-  return make_node<Sine>().control(&Sine::set_freq,
-                                   freq_hz * detail::InvSampleRate);
+  return make_node<SineShaper>(phasor(freq_hz));
+}
+
+// Phase-modulation form: phase is in cycles, added after the accumulator, so
+// sine(c, sine(m) * index) is FM in the classic phase-modulation sense.
+[[nodiscard]] inline Signal sine(Signal freq_hz, Signal phase) {
+  return make_node<SineShaper>(phasor(freq_hz) + phase);
 }
 
 [[nodiscard]] inline Signal saw(Signal freq_hz) {
-  return make_node<Saw>().control(&Saw::set_freq,
-                                  freq_hz * detail::InvSampleRate);
+  return make_node<SawShaper>(phasor(freq_hz));
 }
 
 [[nodiscard]] inline Signal metro(Signal freq_hz) {

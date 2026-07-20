@@ -35,6 +35,8 @@ std::vector<float> run(Engine& engine, std::size_t nframes) {
   return buf;
 }
 
+constexpr float TwoPi = 6.28318530717958647692f;
+
 }  // namespace
 
 TEST_CASE("the engine is silent until a graph arrives, then renders it",
@@ -97,9 +99,9 @@ TEST_CASE("a structural swap transfers state: the sine keeps its phase",
   const auto buf = run(engine, 1280);
   rec.drain();
 
-  // Reference: the same kernel run uninterrupted, setter-then-process per
+  // Reference: the same phasor run uninterrupted, setter-then-process per
   // sample exactly as the graph executes it.
-  Sine k;
+  Phasor k;
   const float w = 375.f * (1.f / 48000.f);
   for (int n = 0; n < 1280; ++n) {
     k.set_freq(w);
@@ -107,7 +109,41 @@ TEST_CASE("a structural swap transfers state: the sine keeps its phase",
   }
   for (int n = 0; n < 1280; ++n) {
     k.set_freq(w);
-    const float expected = std::tanh(k.process());
+    const float expected = std::tanh(std::sin(TwoPi * k.process()));
+    REQUIRE(buf[2 * n] == expected);
+  }
+}
+
+TEST_CASE("a waveform edit keeps the phase: sine becomes saw",
+          "[engine][reconcile]") {
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(describe([](GraphBuilder& g) {
+    auto s = sine(375.f);
+    g.out(s, s);
+  }));
+  (void)run(engine, 1280);
+  rec.drain();
+
+  rec.update(describe([](GraphBuilder& g) {
+               auto s = saw(375.f);
+               g.out(s, s);
+             }),
+             Quantize::Immediate, 0.f);
+  const auto buf = run(engine, 1280);
+  rec.drain();
+
+  // Only the stateless shaper changed; the phasor pairs in the global match
+  // pass, so the saw continues from the sine's accumulated phase.
+  Phasor k;
+  const float w = 375.f * (1.f / 48000.f);
+  for (int n = 0; n < 1280; ++n) {
+    k.set_freq(w);
+    (void)k.process();
+  }
+  for (int n = 0; n < 1280; ++n) {
+    k.set_freq(w);
+    const float expected = 2.f * k.process() - 1.f;
     REQUIRE(buf[2 * n] == expected);
   }
 }

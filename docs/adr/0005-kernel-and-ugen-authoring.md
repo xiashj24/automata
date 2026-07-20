@@ -94,6 +94,16 @@ specializations; and ADR 0002 requires state transfer to be a memcpy.
   and recomputes — the brief's stated preference, and consistent with ADR
   0002's no-CSE rule. Output aggregates must be standard-layout, all
   `float`; enforced at registration.
+- **State lives in the fewest kernels possible.** When a UGen separates
+  into a stateful core and a stateless map, write two kernels and compose
+  in the factory: `sine(f)` is `SineShaper(phasor(f))`, not a monolithic
+  stateful `Sine`. The phase accumulator then exists in exactly one kernel
+  type, so a waveform edit (sine → saw) rehashes only the stateless shaper
+  and ADR 0002's subtree matching carries the phase across the swap —
+  monolithic per-waveform kernels have identical state layouts but no
+  identity relation, so the phase would reset. The upstream design proved
+  this factoring (`osc = sine(phasor(f) + phase)`); it also yields phase
+  modulation for free.
 - **Variable-size state is a template parameter, not a runtime tail.** A
   delay line is `Delayline<MaxSamples>`: the buffer lives inside the
   object, which stays trivially copyable, and transfer stays whole-object

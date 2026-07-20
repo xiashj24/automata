@@ -87,6 +87,11 @@ modulation sources (mouse, OSC) that degrade gracefully when absent.
   for.
 - (−) Last-writer-wins on pending swaps means rapid successive edits skip
   intermediate states — accepted, that is the desired live behavior.
+- (−) Snapping the older fade truncates its tail mid-crossfade, so two
+  saves landing within one fade (50 ms) can step audibly. The upstream
+  design kept a ring of up to 15 concurrently fading graphs instead;
+  rejected here because it unbounds worst-case audio work. Revisit only if
+  real usage saves that fast.
 - (−) ControlBus values are floats only; structured control (strings,
   arrays) has no path. Accepted until a real need appears; seq steps already
   travel the value-patch path instead.

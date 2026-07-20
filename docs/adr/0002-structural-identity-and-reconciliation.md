@@ -27,7 +27,11 @@ stay on the cheap path.
   split is the API, not a convention:
   - *inputs* — which nodes feed this one; structure.
   - *config* — scalars that shape allocation or meaning (delay capacity,
-    seq max length); structure.
+    seq max length); structure. The upstream design's test decides the
+    kind: a baked scalar is config only when its variants have
+    incompatible state — different layout or meaning, so carrying state
+    across the edit would be wrong. Anything a running node could absorb
+    in place (a seq's step list, a mode, an offset) is a value.
   - *values* — scalars a running graph can absorb in place (a constant's
     value, seq steps, an svf's mode); never identity.
   - *state* — DSP memory (trivially copyable bytes); never identity,

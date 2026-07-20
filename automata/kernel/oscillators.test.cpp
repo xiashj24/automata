@@ -8,8 +8,8 @@
 using Catch::Approx;
 
 static_assert(std::is_trivially_copyable_v<automata::Phasor>);
-static_assert(std::is_trivially_copyable_v<automata::Sine>);
-static_assert(std::is_trivially_copyable_v<automata::Saw>);
+static_assert(std::is_trivially_copyable_v<automata::SineShaper>);
+static_assert(std::is_trivially_copyable_v<automata::SawShaper>);
 static_assert(std::is_trivially_copyable_v<automata::Metro>);
 
 TEST_CASE("phasor ramps and wraps", "[kernel][oscillators]") {
@@ -23,27 +23,22 @@ TEST_CASE("phasor ramps and wraps", "[kernel][oscillators]") {
   REQUIRE(p.process() == Approx(0.f));  // wrapped
 }
 
-TEST_CASE("sine starts at zero and hits its quarter-cycle peak",
-          "[kernel][oscillators]") {
-  automata::Sine s;
-  s.set_freq(1.f / 64.f);
+TEST_CASE("sine shaper maps phase to a unit sine", "[kernel][oscillators]") {
+  automata::SineShaper s;
 
-  REQUIRE(s.process() == Approx(0.f).margin(1e-6));
-  for (int i = 1; i < 16; ++i) {
-    (void)s.process();
-  }
-  REQUIRE(s.process() == Approx(1.f).margin(1e-5));  // sample 16 of 64
+  REQUIRE(s.process(0.f) == Approx(0.f).margin(1e-6));
+  REQUIRE(s.process(0.25f) == Approx(1.f).margin(1e-6));
+  REQUIRE(s.process(0.5f) == Approx(0.f).margin(1e-6));
+  REQUIRE(s.process(0.75f) == Approx(-1.f).margin(1e-6));
 }
 
-TEST_CASE("saw spans -1..1 over one period", "[kernel][oscillators]") {
-  automata::Saw s;
-  s.set_freq(0.25f);
+TEST_CASE("saw shaper maps phase to a bipolar ramp", "[kernel][oscillators]") {
+  automata::SawShaper s;
 
-  REQUIRE(s.process() == Approx(-1.f));
-  REQUIRE(s.process() == Approx(-0.5f));
-  REQUIRE(s.process() == Approx(0.f));
-  REQUIRE(s.process() == Approx(0.5f));
-  REQUIRE(s.process() == Approx(-1.f));  // wrapped
+  REQUIRE(s.process(0.f) == Approx(-1.f));
+  REQUIRE(s.process(0.25f) == Approx(-0.5f));
+  REQUIRE(s.process(0.5f) == Approx(0.f));
+  REQUIRE(s.process(0.75f) == Approx(0.5f));
 }
 
 TEST_CASE("metro fires on its first sample, then once per period",
