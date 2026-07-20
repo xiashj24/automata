@@ -1,0 +1,76 @@
+[submodule "reference/csound"]
+	path = reference/csound
+	url = https://github.com/csound/csound
+[submodule "reference/elementary"]
+	path = reference/elementary
+	url = https://github.com/elemaudio/elementary
+	branch = develop
+[submodule "reference/signalflow"]
+	path = reference/signalflow
+	url = https://github.com/ideoforms/signalflow
+[submodule "reference/supercollider"]
+	path = reference/supercollider
+	url = https://github.com/supercollider/supercollider
+[submodule "reference/faustlibraries"]
+	path = reference/faustlibraries
+	url = https://github.com/grame-cncm/faustlibraries
+[submodule "reference/jsyn"]
+	path = reference/jsyn
+	url = https://github.com/philburk/jsyn
+[submodule "reference/klang"]
+	path = reference/klang
+	url = https://github.com/nashaudio/klang
+[submodule "reference/sapf"]
+	path = reference/sapf
+	url = https://github.com/lfnoise/sapf
+[submodule "reference/Gamma"]
+	path = reference/Gamma
+	url = https://github.com/LancePutnam/Gamma
+[submodule "reference/DaisySP"]
+	path = reference/DaisySP
+	url = https://github.com/electro-smith/DaisySP
+[submodule "reference/Soundpipe"]
+	path = reference/Soundpipe
+	url = https://github.com/PaulBatchelor/Soundpipe
+[submodule "reference/stk"]
+	path = reference/stk
+	url = https://github.com/thestk/stk
+[submodule "reference/q"]
+	path = reference/q
+	url = https://github.com/cycfi/q
+[submodule "reference/signalsmith-dsp"]
+	path = reference/signalsmith-dsp
+	url = https://github.com/Signalsmith-Audio/dsp
+[submodule "reference/signalsmith-basics"]
+	path = reference/signalsmith-basics
+	url = https://github.com/Signalsmith-Audio/basics
+[submodule "reference/signalsmith-stretch"]
+	path = reference/signalsmith-stretch
+	url = https://github.com/Signalsmith-Audio/signalsmith-stretch
+[submodule "reference/elliptic-blep"]
+	path = reference/elliptic-blep
+	url = https://github.com/Signalsmith-Audio/elliptic-blep
+[submodule "reference/sst-basic-blocks"]
+	path = reference/sst-basic-blocks
+	url = https://github.com/surge-synthesizer/sst-basic-blocks
+[submodule "reference/sst-filters"]
+	path = reference/sst-filters
+	url = https://github.com/surge-synthesizer/sst-filters
+[submodule "reference/sst-waveshapers"]
+	path = reference/sst-waveshapers
+	url = https://github.com/surge-synthesizer/sst-waveshapers
+[submodule "reference/sst-effects"]
+	path = reference/sst-effects
+	url = https://github.com/surge-synthesizer/sst-effects
+[submodule "reference/airwindows"]
+	path = reference/airwindows
+	url = https://github.com/airwindows/airwindows
+[submodule "reference/Maximilian"]
+	path = reference/Maximilian
+	url = https://github.com/micknoise/Maximilian
+[submodule "reference/vital"]
+	path = reference/vital
+	url = https://github.com/mtytel/vital
+[submodule "reference/music-dsp"]
+	path = reference/music-dsp
+	url = https://github.com/bdejong/musicdsp
