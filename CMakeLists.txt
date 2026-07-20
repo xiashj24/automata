@@ -8,6 +8,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(cmake/get_cpm.cmake)
 
+# Header-only; DOWNLOAD_ONLY sidesteps its CMakeLists entirely.
+CPMAddPackage(
+  NAME
+  miniaudio
+  GITHUB_REPOSITORY
+  mackron/miniaudio
+  GIT_TAG
+  0.11.25
+  DOWNLOAD_ONLY
+  YES)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   set(AUTOMATA_WARNINGS -Wall -Wextra)
 elseif(MSVC)
@@ -19,9 +30,13 @@ endif()
 # path: #include "automata/core/hash.hpp"
 add_library(automata STATIC
   automata/core/assert.cpp
+  automata/engine/graph.cpp
+  automata/engine/offline.cpp
+  automata/engine/wav.cpp
 )
 add_library(automata::automata ALIAS automata)
 target_include_directories(automata PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(automata SYSTEM PRIVATE "${miniaudio_SOURCE_DIR}")
 target_compile_features(automata PUBLIC cxx_std_23)
 target_compile_options(automata PRIVATE ${AUTOMATA_WARNINGS})
 
