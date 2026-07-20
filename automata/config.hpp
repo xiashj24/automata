@@ -21,6 +21,9 @@ inline constexpr std::size_t OutboxCapacity = 256;
 
 inline constexpr std::size_t ControlBusCapacity = 256;
 
+// Per-tap delay buffer (power of two): ~2.7 s at 48 kHz.
+inline constexpr std::size_t TapBufferSamples = std::size_t{1} << 17;
+
 // Reconciliation defaults (ADR 0002): value edits glide, swaps crossfade.
 inline constexpr float DefaultValueRampSeconds = 0.010f;
 inline constexpr float DefaultCrossfadeSeconds = 0.050f;

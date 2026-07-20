@@ -30,6 +30,7 @@ struct GraphDef {
     std::uint32_t config_count = 0;
     std::uint32_t op_begin = 0;
     std::uint32_t op_size = 0;
+    std::uint8_t sink = 0;  // effectful without consumers (tap writes)
   };
 
   std::vector<Node> nodes;  // creation order — inputs precede their users

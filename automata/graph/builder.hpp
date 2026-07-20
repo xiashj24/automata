@@ -4,7 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 #include "automata/config.hpp"
 #include "automata/core/assert.hpp"
@@ -34,30 +36,60 @@ private:
 
 namespace detail {
 
-// The Const op: fills its block with values[0]. Hand-written info — Const
-// is graph vocabulary, not a kernel.
-inline void const_process(void*,
+// The Const op. Hand-written info — Const is graph vocabulary, not a
+// kernel. It ramps toward values[0] whenever the table changes (ADR 0002's
+// ~10 ms glide); because the ramp lives in transferable state, a value that
+// changes across a structural swap glides too.
+struct ConstState {
+  float current = 0.f;
+  float target = 0.f;
+  std::uint32_t remaining = 0;
+  std::uint32_t initialized = 0;
+};
+
+inline void const_process(void* state,
                           const float* const*,
                           const std::byte*,
                           const float* values,
                           float* out,
                           std::uint32_t nframes) {
-  std::fill_n(out, nframes, values[0]);
+  auto& s = *static_cast<ConstState*>(state);
+  const float v = values[0];
+  if (s.initialized == 0) {
+    s.initialized = 1;
+    s.current = s.target = v;
+  }
+  if (v != s.target) {
+    s.target = v;
+    constexpr auto Ramp = static_cast<std::uint32_t>(
+        DefaultValueRampSeconds * static_cast<float>(SampleRate));
+    s.remaining = Ramp > 0 ? Ramp : 1;
+  }
+  for (std::uint32_t i = 0; i < nframes; ++i) {
+    if (s.remaining > 0) {
+      s.current += (s.target - s.current) / static_cast<float>(s.remaining);
+      --s.remaining;
+      if (s.remaining == 0) {
+        s.current = s.target;
+      }
+    }
+    out[i] = s.current;
+  }
 }
-
-inline void nop_state(void*) {}
 
 inline const KernelInfo ConstInfo{
     .type_hash = hash_string("automata.Const"),
-    .state_size = 0,
-    .state_align = 1,
+    .state_size = sizeof(ConstState),
+    .state_align = alignof(ConstState),
     .output_count = 1,
-    .construct = &nop_state,
-    .reset = &nop_state,
+    .construct = +[](void* s) { ::new (s) ConstState{}; },
+    .reset = +[](void* s) { *static_cast<ConstState*>(s) = ConstState{}; },
     .process = &const_process,
 };
 
 }  // namespace detail
+
+class Tap;
 
 class GraphBuilder {
 public:
@@ -66,12 +98,14 @@ public:
                                 std::span<const Signal> inputs,
                                 std::span<const float> values,
                                 std::span<const float> configs,
-                                std::span<const std::byte> op_data) {
+                                std::span<const std::byte> op_data,
+                                bool sink = false) {
     atm_assert(kernel != nullptr);
     atm_assert(def_.nodes.size() < MaxGraphNodes);
     GraphDef::Node node;
     node.kernel = kernel;
     node.type_hash = type_hash;
+    node.sink = sink ? 1 : 0;
     node.input_begin = static_cast<std::uint32_t>(def_.inputs.size());
     node.input_count = static_cast<std::uint32_t>(inputs.size());
     for (const Signal s : inputs) {
@@ -103,6 +137,12 @@ public:
     has_out_ = true;
   }
 
+  // A named tap hashes by its name — identity that survives any edit; an
+  // anonymous tap hashes by creation ordinal, fragile under reordering
+  // (ADR 0002). Defined in graph/tap.hpp.
+  [[nodiscard]] Tap tap(std::string_view name);
+  [[nodiscard]] Tap tap();
+
   // Finalizes structural hashes and yields the def; the builder is spent.
   [[nodiscard]] GraphDef build() {
     atm_assert(has_out_);
@@ -119,11 +159,26 @@ public:
     }
     def_.def_hash = hash_combine(def_.nodes[def_.outs[0]].structural_hash,
                                  def_.nodes[def_.outs[1]].structural_hash);
+    // Sinks (tap writes) are effectful even when unreachable from the outs,
+    // so they participate in def identity — sorted, to stay reorder-stable.
+    std::vector<Hash> sinks;
+    for (const auto& node : def_.nodes) {
+      if (node.sink != 0) {
+        sinks.push_back(node.structural_hash);
+      }
+    }
+    std::sort(sinks.begin(), sinks.end());
+    for (const Hash s : sinks) {
+      def_.def_hash = hash_combine(def_.def_hash, s);
+    }
     return std::move(def_);
   }
 
 private:
+  friend class Tap;
+
   GraphDef def_;
+  std::uint32_t tap_count_ = 0;
   bool has_out_ = false;
 };
 

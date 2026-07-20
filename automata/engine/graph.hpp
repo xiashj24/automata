@@ -21,6 +21,9 @@ public:
 
   void process_block() noexcept;
 
+  // Overwrites the values table in place (audio thread, bounded memcpy).
+  void apply_values(const float* values, std::uint32_t count) noexcept;
+
   [[nodiscard]] std::span<const float> left() const noexcept {
     return node_output(def_.outs[0]);
   }
@@ -33,11 +36,20 @@ public:
   }
   [[nodiscard]] const GraphDef& def() const noexcept { return def_; }
 
+  // State locations for TransferPlan building (control thread); the arenas
+  // never move after construction.
+  [[nodiscard]] std::byte* state_ptr(std::uint32_t node) noexcept {
+    return state_ptrs_[node];
+  }
+  [[nodiscard]] const std::byte* state_ptr(std::uint32_t node) const noexcept {
+    return state_ptrs_[node];
+  }
+
 private:
   GraphDef def_;
   std::vector<float> values_;
   std::vector<float> buffers_;
-  std::vector<std::size_t> state_offsets_;
+  std::vector<std::byte*> state_ptrs_;
   std::vector<std::byte> state_;
   std::vector<const float*> input_ptrs_;
 };

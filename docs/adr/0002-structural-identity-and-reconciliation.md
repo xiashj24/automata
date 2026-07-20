@@ -33,9 +33,14 @@ stay on the cheap path.
   - *state* — DSP memory (trivially copyable bytes); never identity,
     transferable across generations.
 - **Identity is `hash(type, config, input hashes)`** — 64-bit, values
-  excluded, no source locations anywhere. Equal-hash nodes within a graph
-  are distinguished by occurrence ordinal in deterministic schedule order;
-  cross-generation matching pairs by (hash, ordinal).
+  excluded, no source locations anywhere. Cross-generation matching pairs
+  equal-hash nodes positionally: a descent from the outputs (and sinks)
+  pairs matching subtrees input-by-input, so reordered statements cannot
+  cross-wire the many equal-hash leaves (every `Const` hashes alike); a
+  second pass pairs still-unmatched *non-leaf* subtrees globally by hash,
+  parents first, which is what keeps state when an edit merely wraps or
+  moves a subtree. Bare leaves never pair on their own — only through a
+  parent — because they carry no distinguishing context.
 - **Sharing is author-expressed, not inferred.** Reusing one `Signal` in two
   places is one node computed once per block (fan-out dedup). There is no
   hash-based CSE: two separately written identical subtrees remain two

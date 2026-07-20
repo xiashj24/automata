@@ -30,8 +30,11 @@ endif()
 # path: #include "automata/core/hash.hpp"
 add_library(automata STATIC
   automata/core/assert.cpp
+  automata/engine/diff.cpp
+  automata/engine/engine.cpp
   automata/engine/graph.cpp
   automata/engine/offline.cpp
+  automata/engine/reconcile.cpp
   automata/engine/wav.cpp
 )
 add_library(automata::automata ALIAS automata)

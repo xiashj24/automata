@@ -2,6 +2,7 @@
 
 #include "automata/config.hpp"
 #include "automata/graph/make_node.hpp"
+#include "automata/graph/tap.hpp"
 #include "automata/kernel/arith.hpp"
 #include "automata/kernel/envelopes.hpp"
 #include "automata/kernel/oscillators.hpp"
