@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "automata/config.hpp"
+#include "automata/core/control_bus.hpp"
 #include "automata/core/hash.hpp"
 #include "automata/core/lockfree_queue.hpp"
 #include "automata/engine/diff.hpp"
@@ -60,6 +61,9 @@ public:
   [[nodiscard]] const Transport& transport() const noexcept {
     return transport_;
   }
+  // External control: written by control-side threads, read by the params
+  // of every graph built against this engine.
+  [[nodiscard]] ControlBus& bus() noexcept { return bus_; }
   [[nodiscard]] std::uint64_t dropped_msgs() const noexcept {
     return dropped_msgs_;
   }
@@ -86,6 +90,7 @@ private:
 
   std::uint64_t dropped_msgs_ = 0;
 
+  ControlBus bus_;
   LockfreeQueue<InMsg, InboxCapacity> inbox_;
   LockfreeQueue<OutMsg, OutboxCapacity> outbox_;
 };

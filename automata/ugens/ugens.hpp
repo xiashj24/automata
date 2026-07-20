@@ -2,6 +2,7 @@
 
 #include "automata/config.hpp"
 #include "automata/graph/make_node.hpp"
+#include "automata/graph/param.hpp"
 #include "automata/graph/tap.hpp"
 #include "automata/kernel/arith.hpp"
 #include "automata/kernel/envelopes.hpp"
@@ -85,6 +86,15 @@ inline Signal operator-(Signal a) {
 
 [[nodiscard]] inline Signal soft_clip(Signal in) {
   return make_node<SoftClip>(in);
+}
+
+// The pointer as a control surface: 0..1 across the virtual desktop, y
+// growing downward. The host polls the cursor into these slots.
+[[nodiscard]] inline Signal mouse_x() {
+  return param("mouse/x", 0.5f);
+}
+[[nodiscard]] inline Signal mouse_y() {
+  return param("mouse/y", 0.5f);
 }
 
 }  // namespace automata

@@ -26,7 +26,8 @@ GraphDef full_vocabulary_def() {
     const Signal wet =
         soft_clip(filtered / 2.f) + (-filtered) + fb.read(0.25f) * 0.5f;
     fb.write(wet);
-    g.out(wet, wet);
+    const Signal controlled = wet * param("gain", 0.5f) + mouse_x();
+    g.out(controlled, controlled);
   });
 }
 

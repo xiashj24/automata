@@ -265,6 +265,83 @@ TEST_CASE("a tapped patch swaps with its delay memory intact",
   REQUIRE(buf[2 * 6000] == Approx(std::tanh(0.5f)));
 }
 
+TEST_CASE("a param plays its fallback until the bus is written, then glides",
+          "[engine][param]") {
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(describe([](GraphBuilder& g) {
+    auto p = param("gain", 0.25f);
+    g.out(p, p);
+  }));
+  auto buf = run(engine, 2 * BlockSize);
+  rec.drain();
+  REQUIRE(buf[2 * (2 * BlockSize - 1)] == 0.25f);
+
+  engine.bus().set("gain", 0.75f);
+  buf = run(engine, 768);
+  REQUIRE(buf[0] > 0.25f);
+  REQUIRE(buf[0] < 0.26f);  // one ramp step, not a jump
+  REQUIRE(buf[2 * 700] == 0.75f);
+}
+
+TEST_CASE("editing a param fallback is a value patch and glides",
+          "[engine][param]") {
+  const auto def_with = [](float fallback) {
+    return describe([&](GraphBuilder& g) {
+      auto p = param("q", fallback);
+      g.out(p, p);
+    });
+  };
+  REQUIRE(def_with(0.25f).def_hash == def_with(0.75f).def_hash);
+
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(def_with(0.25f));
+  (void)run(engine, BlockSize);
+  rec.drain();
+
+  rec.update(def_with(0.75f));
+  const auto buf = run(engine, 768);
+  rec.drain();
+  REQUIRE(buf[0] > 0.25f);
+  REQUIRE(buf[0] < 0.26f);
+  REQUIRE(buf[2 * 700] == 0.75f);
+}
+
+TEST_CASE("a param's live value survives a structural swap",
+          "[engine][param]") {
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(describe([](GraphBuilder& g) {
+    auto p = param("gain", 0.25f);
+    g.out(p, p);
+  }));
+  (void)run(engine, BlockSize);
+  rec.drain();
+  engine.bus().set("gain", 0.75f);
+  (void)run(engine, 768);  // settled on the live value
+
+  rec.update(describe([](GraphBuilder& g) {
+               auto p = param("gain", 0.25f);
+               g.out(soft_clip(p), soft_clip(p));
+             }),
+             Quantize::Immediate, 0.f);
+  const auto buf = run(engine, 2 * BlockSize);
+  rec.drain();
+  // No re-glide from the fallback: the transferred ramp is already there.
+  REQUIRE(buf[0] == Approx(std::tanh(0.75f)));
+}
+
+TEST_CASE("offline, a param renders its fallback", "[engine][param]") {
+  const auto pcm = render_interleaved(describe([](GraphBuilder& g) {
+                                        auto p = param("cutoff", 0.5f);
+                                        g.out(p, p);
+                                      }),
+                                      256);
+  REQUIRE(pcm[0] == 0.5f);
+  REQUIRE(pcm[2 * 255] == 0.5f);
+}
+
 TEST_CASE("an owner token is released only when its graph retires",
           "[engine][reconcile]") {
   Engine engine;

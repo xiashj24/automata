@@ -15,9 +15,13 @@
 
 namespace automata {
 
+class ControlBus;
+
 class Graph {
 public:
-  explicit Graph(GraphDef def);
+  // With a bus, param nodes bind their slots at construction; without one
+  // (offline, tests) they play their fallbacks.
+  explicit Graph(GraphDef def, ControlBus* bus = nullptr);
 
   void process_block() noexcept;
 

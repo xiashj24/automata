@@ -18,6 +18,7 @@ namespace automata {
   registry.add_data_kernel(&detail::ConstInfo);
   registry.add_data_kernel(&detail::TapWriteInfo);
   registry.add_data_kernel(&detail::TapReadInfo);
+  registry.add_data_kernel(&detail::ParamInfo);
 
   const GraphDef probe = describe([](GraphBuilder& g) {
     const Signal osc = sine(440.f) + saw(110.f) - phasor(1.f);

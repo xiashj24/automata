@@ -69,11 +69,11 @@ of the live-coding loop for no property gained.
 
 | Layer            | Contents                                                        | May depend on        |
 | ---------------- | --------------------------------------------------------------- | -------------------- |
-| `automata/core`  | assert, hash, `RingBuffer`, `LockfreeQueue`, arena              | nothing              |
+| `automata/core`  | assert, hash, `RingBuffer`, `LockfreeQueue`, `ControlBus`       | nothing              |
 | `automata/kernel`| pure DSP kernels (phasor, svf, delayline, envelopes, …)         | nothing              |
 | `automata/graph` | `Signal`, `GraphBuilder`, `GraphDef`, structural hashing        | core                 |
 | `automata/ugens` | UGen vocabulary: thin factories binding kernels into the graph  | graph, kernel        |
-| `automata/engine`| `Graph`, reconciliation, `Engine`, `Transport`, `ControlBus`    | core, graph          |
+| `automata/engine`| `Graph`, reconciliation, `Engine`, `Transport`, OSC decode      | core, graph          |
 | `host/`          | live host: audio device, DLL generations, OSC, mouse            | engine, ugens, deps  |
 | `tools/`         | offline renderer CLI                                            | engine, ugens        |
 | patches          | user code; includes `automata/patch.hpp` (graph + ugens only)   | graph, ugens         |
@@ -279,8 +279,8 @@ reference/           submodules surveyed for DSP prior art (never linked)
 Build: CMake + CPM. Targets `automata::automata` (static lib), `host`,
 `render`, an `automata_add_patch()` helper for patch modules, and xhal-style
 auto-globbed Catch2 tests (`*.test.cpp` → one target each). Dependencies:
-miniaudio (device I/O *and* WAV encoding), Catch2 (tests), an OSC transport
-TBD at implementation (tiny codec is written in-house either way).
+miniaudio (device I/O *and* WAV encoding) and Catch2 (tests); OSC rides
+plain UDP sockets with an in-house codec (ADR 0007).
 
 ## Build order
 
@@ -303,4 +303,3 @@ before a DLL or device ever appears:
 - Buffer-pool liveness reuse (one buffer per node is fine at current scale).
 - Sample-exact swap boundaries (block granularity first).
 - Offline automation input (scripted ControlBus writes for batch renders).
-- OSC transport choice (SDL3_net vs. plain sockets) — decided at Phase 4.

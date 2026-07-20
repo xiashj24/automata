@@ -19,6 +19,8 @@
 #include "automata/ugens/vocabulary.hpp"
 #include "host/audio.hpp"
 #include "host/generation.hpp"
+#include "host/mouse.hpp"
+#include "host/osc_listener.hpp"
 #include "host/watcher.hpp"
 
 // The live host (ADR 0001/0003): watch the built patch library, load each
@@ -41,6 +43,7 @@ struct Options {
   float bpm = 0.f;  // 0 = keep the transport default
   automata::Quantize quantize = automata::Quantize::Immediate;
   float fade_seconds = automata::DefaultCrossfadeSeconds;
+  std::uint16_t osc_port = 0;  // 0 = no listener
 };
 
 [[nodiscard]] std::optional<float> parse_float(std::string_view text) {
@@ -48,6 +51,16 @@ struct Options {
   const auto [ptr, ec] =
       std::from_chars(text.data(), text.data() + text.size(), value);
   if (ec != std::errc{} || ptr != text.data() + text.size()) {
+    return std::nullopt;
+  }
+  return value;
+}
+
+[[nodiscard]] std::optional<std::uint16_t> parse_port(std::string_view text) {
+  std::uint16_t value = 0;
+  const auto [ptr, ec] =
+      std::from_chars(text.data(), text.data() + text.size(), value);
+  if (ec != std::errc{} || ptr != text.data() + text.size() || value == 0) {
     return std::nullopt;
   }
   return value;
@@ -74,6 +87,13 @@ struct Options {
         return std::nullopt;
       }
       options.fade_seconds = *fade;
+      ++i;
+    } else if (arg == "--osc") {
+      const auto port = parse_port(value);
+      if (!port.has_value()) {
+        return std::nullopt;
+      }
+      options.osc_port = *port;
       ++i;
     } else if (arg == "--quantize") {
       if (value == "immediate") {
@@ -111,6 +131,8 @@ struct Options {
       return "audio device init failed";
     case automata::Error::DeviceStartFailed:
       return "audio device start failed";
+    case automata::Error::SocketBindFailed:
+      return "OSC socket bind failed (port in use?)";
   }
   std::unreachable();
 }
@@ -169,6 +191,18 @@ void reload(const Options& options,
         {.kind = automata::InMsg::Kind::SetBpm, .bpm = options.bpm});
   }
 
+  std::unique_ptr<automata::host::OscListener> osc;
+  if (options.osc_port != 0) {
+    auto listener =
+        automata::host::OscListener::start(options.osc_port, engine.bus());
+    if (!listener.has_value()) {
+      std::fprintf(stderr, "[host] %s\n", error_name(listener.error()));
+      return EXIT_FAILURE;
+    }
+    osc = std::move(*listener);
+    std::printf("[host] OSC listening on udp/%u\n", osc->port());
+  }
+
   auto device = automata::host::AudioDevice::start(engine);
   if (!device.has_value()) {
     std::fprintf(stderr, "[host] %s\n", error_name(device.error()));
@@ -181,6 +215,7 @@ void reload(const Options& options,
 
   automata::Hash live_def_hash = 0;
   while (!g_stop.load()) {
+    automata::host::poll_mouse(engine.bus());
     if (watcher.poll()) {
       reload(options, pool, registry, reconciler, watcher, live_def_hash);
     }
@@ -201,7 +236,8 @@ int main(int argc, char** argv) {
   if (!options.has_value()) {
     std::fprintf(stderr,
                  "usage: host <patch-library> [--bpm N] "
-                 "[--quantize immediate|beat|bar] [--fade seconds]\n");
+                 "[--quantize immediate|beat|bar] [--fade seconds] "
+                 "[--osc port]\n");
     return EXIT_FAILURE;
   }
   (void)std::signal(SIGINT, &handle_signal);

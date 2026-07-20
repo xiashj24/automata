@@ -17,6 +17,7 @@ enum class Error {
   AbiMismatch,
   DeviceInitFailed,
   DeviceStartFailed,
+  SocketBindFailed,
 };
 
 template <typename T>

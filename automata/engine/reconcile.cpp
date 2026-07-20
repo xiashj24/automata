@@ -62,7 +62,7 @@ void Reconciler::pump() {
     return;
   }
 
-  auto* graph = new Graph(p.def);
+  auto* graph = new Graph(p.def, &engine_.bus());
   auto* plan = new TransferPlan(live_graph_ != nullptr
                                     ? plan_transfer(*live_graph_, *graph)
                                     : TransferPlan{});

@@ -34,6 +34,7 @@ add_library(automata STATIC
   automata/engine/engine.cpp
   automata/engine/graph.cpp
   automata/engine/offline.cpp
+  automata/engine/osc.cpp
   automata/engine/reconcile.cpp
   automata/engine/wav.cpp
 )
@@ -52,8 +53,13 @@ add_executable(host
   host/audio.cpp
   host/generation.cpp
   host/main.cpp
+  host/mouse.cpp
+  host/osc_listener.cpp
 )
 target_link_libraries(host PRIVATE automata::automata ${CMAKE_DL_LIBS})
+if(WIN32)
+  target_link_libraries(host PRIVATE ws2_32)
+endif()
 target_include_directories(host SYSTEM PRIVATE "${miniaudio_SOURCE_DIR}")
 target_compile_options(host PRIVATE ${AUTOMATA_WARNINGS})
 

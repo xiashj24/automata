@@ -36,31 +36,26 @@ private:
 
 namespace detail {
 
-// The Const op. Hand-written info — Const is graph vocabulary, not a
-// kernel. It ramps toward values[0] whenever the table changes (ADR 0002's
-// ~10 ms glide); because the ramp lives in transferable state, a value that
-// changes across a structural swap glides too.
-struct ConstState {
+// The glide every control leaf (Const, param) plays through (ADR 0002's
+// ~10 ms ramp): the first value snaps, later changes ramp linearly. Living
+// in transferable state, a glide survives a structural swap mid-ramp.
+struct RampState {
   float current = 0.f;
   float target = 0.f;
   std::uint32_t remaining = 0;
   std::uint32_t initialized = 0;
 };
 
-inline void const_process(void* state,
-                          const float* const*,
-                          const std::byte*,
-                          const float* values,
-                          float* out,
-                          std::uint32_t nframes) {
-  auto& s = *static_cast<ConstState*>(state);
-  const float v = values[0];
+inline void ramp_toward(RampState& s,
+                        float value,
+                        float* out,
+                        std::uint32_t nframes) {
   if (s.initialized == 0) {
     s.initialized = 1;
-    s.current = s.target = v;
+    s.current = s.target = value;
   }
-  if (v != s.target) {
-    s.target = v;
+  if (value != s.target) {
+    s.target = value;
     constexpr auto Ramp = static_cast<std::uint32_t>(
         DefaultValueRampSeconds * static_cast<float>(SampleRate));
     s.remaining = Ramp > 0 ? Ramp : 1;
@@ -77,13 +72,24 @@ inline void const_process(void* state,
   }
 }
 
+// The Const op. Hand-written info — Const is graph vocabulary, not a
+// kernel; it plays its patchable values[0] through the shared glide.
+inline void const_process(void* state,
+                          const float* const*,
+                          const std::byte*,
+                          const float* values,
+                          float* out,
+                          std::uint32_t nframes) {
+  ramp_toward(*static_cast<RampState*>(state), values[0], out, nframes);
+}
+
 inline const KernelInfo ConstInfo{
     .type_hash = hash_string("automata.Const"),
-    .state_size = sizeof(ConstState),
-    .state_align = alignof(ConstState),
+    .state_size = sizeof(RampState),
+    .state_align = alignof(RampState),
     .output_count = 1,
-    .construct = +[](void* s) { ::new (s) ConstState{}; },
-    .reset = +[](void* s) { *static_cast<ConstState*>(s) = ConstState{}; },
+    .construct = +[](void* s) { ::new (s) RampState{}; },
+    .reset = +[](void* s) { *static_cast<RampState*>(s) = RampState{}; },
     .process = &const_process,
 };
 

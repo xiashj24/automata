@@ -4,12 +4,15 @@
 #include <utility>
 
 #include "automata/core/assert.hpp"
+#include "automata/core/control_bus.hpp"
 #include "automata/graph/kernel_info.hpp"
+#include "automata/graph/param.hpp"
 #include "automata/graph/tap.hpp"
 
 namespace automata {
 
-Graph::Graph(GraphDef def) : def_(std::move(def)), values_(def_.values) {
+Graph::Graph(GraphDef def, ControlBus* bus)
+    : def_(std::move(def)), values_(def_.values) {
   const std::size_t count = def_.nodes.size();
   atm_assert(count > 0);
   buffers_.resize(count * BlockSize, 0.f);
@@ -45,6 +48,17 @@ Graph::Graph(GraphDef def) : def_(std::move(def)), values_(def_.values) {
     }
     atm_assert(write_state != nullptr);  // a read requires its write
     state_ptrs_[i] = write_state;
+  }
+
+  // Params bind their slot by name; unwired (no bus, or a full bus) they
+  // play their patchable fallback.
+  if (bus != nullptr) {
+    for (std::size_t i = 0; i < count; ++i) {
+      if (def_.nodes[i].kernel != &detail::ParamInfo)
+        continue;
+      auto& s = *reinterpret_cast<detail::ParamState*>(state_ptrs_[i]);
+      s.slot = bus->channel(param_name(def_, def_.nodes[i]));
+    }
   }
 
   input_ptrs_.resize(def_.inputs.size());
