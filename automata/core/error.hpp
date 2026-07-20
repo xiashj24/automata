@@ -11,6 +11,12 @@ namespace automata {
 enum class Error {
   FileCreateFailed,
   EncodeFailed,
+  FileCopyFailed,
+  LibraryLoadFailed,
+  SymbolNotFound,
+  AbiMismatch,
+  DeviceInitFailed,
+  DeviceStartFailed,
 };
 
 template <typename T>

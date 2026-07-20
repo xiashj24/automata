@@ -43,10 +43,25 @@ target_include_directories(automata SYSTEM PRIVATE "${miniaudio_SOURCE_DIR}")
 target_compile_features(automata PUBLIC cxx_std_23)
 target_compile_options(automata PRIVATE ${AUTOMATA_WARNINGS})
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
 if(NOT PROJECT_IS_TOP_LEVEL)
   return()
 endif()
+
+# ── Live host ─────────────────────────────────────────────────────────────────
+add_executable(host
+  host/audio.cpp
+  host/generation.cpp
+  host/main.cpp
+)
+target_link_libraries(host PRIVATE automata::automata ${CMAKE_DL_LIBS})
+target_include_directories(host SYSTEM PRIVATE "${miniaudio_SOURCE_DIR}")
+target_compile_options(host PRIVATE ${AUTOMATA_WARNINGS})
+
+# ── Patches ───────────────────────────────────────────────────────────────────
+include(cmake/automata_patch.cmake)
+add_subdirectory(patches)
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
 
 CPMAddPackage("gh:catchorg/Catch2@3.8.1")
 find_package(Threads REQUIRED)

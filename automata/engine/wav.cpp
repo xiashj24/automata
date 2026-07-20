@@ -4,10 +4,8 @@
 
 #include "automata/config.hpp"
 
-// The library's single miniaudio implementation TU. Device I/O is excluded
-// until the live host needs it (Phase 3), keeping offline rendering free of
-// platform audio dependencies.
-#define MA_NO_DEVICE_IO
+// The library's single miniaudio implementation TU: WAV encoding for this
+// file, device I/O for the live host — every consumer links the one copy.
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 

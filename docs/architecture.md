@@ -251,7 +251,9 @@ interface; doing so pins their generation until retirement (ADR 0001).
 
 1. Build produces `patch.dll`; the host shadow-copies it (so the compiler is
    never blocked by a file lock) and loads the copy.
-2. Describe runs; the def is deep-copied into host memory.
+2. Describe runs against a host-owned builder; the host rebinds known
+   kernels to its own statics and canonical op bytes (ADR 0006), leaving
+   only custom kernels pointing into the generation.
 3. Vocabulary-only patch → the generation is unloaded immediately and its
    shadow copy deleted. Custom-kernel patch → the resulting Graph holds a
    generation reference; the control thread drops it when the Program is

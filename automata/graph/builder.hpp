@@ -137,6 +137,9 @@ public:
     has_out_ = true;
   }
 
+  // build() requires an out; loaders check instead of crashing on a bad patch.
+  [[nodiscard]] bool has_out() const { return has_out_; }
+
   // A named tap hashes by its name — identity that survives any edit; an
   // anonymous tap hashes by creation ordinal, fragile under reordering
   // (ADR 0002). Defined in graph/tap.hpp.

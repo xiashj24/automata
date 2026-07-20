@@ -7,6 +7,7 @@
 #include "automata/ugens/ugens.hpp"
 
 #include <cmath>
+#include <memory>
 #include <vector>
 
 using namespace automata;
@@ -262,4 +263,30 @@ TEST_CASE("a tapped patch swaps with its delay memory intact",
   // The echo of the pre-swap impulse arrives on schedule: absolute sample
   // 12000 is index 6000 here, amplitude tanh(0.5).
   REQUIRE(buf[2 * 6000] == Approx(std::tanh(0.5f)));
+}
+
+TEST_CASE("an owner token is released only when its graph retires",
+          "[engine][reconcile]") {
+  Engine engine;
+  Reconciler rec(engine);
+  auto owner = std::make_shared<int>(0);
+
+  rec.update(const_def(0.5f), Quantize::Immediate, 0.f, owner);
+  (void)run(engine, BlockSize);
+  rec.drain();
+  REQUIRE(owner.use_count() == 2);  // held for the live graph
+
+  // A value patch builds no graph: its owner drops immediately.
+  auto patch_owner = std::make_shared<int>(0);
+  rec.update(const_def(0.9f), Quantize::Immediate, 0.f, patch_owner);
+  (void)run(engine, BlockSize);
+  rec.drain();
+  REQUIRE(patch_owner.use_count() == 1);
+  REQUIRE(owner.use_count() == 2);  // the live graph still pins its producer
+
+  // A structural swap retires the first graph and with it the token.
+  rec.update(mul_def(0.5f, 1.f), Quantize::Immediate, 0.f);
+  (void)run(engine, 2 * BlockSize);
+  rec.drain();
+  REQUIRE(owner.use_count() == 1);
 }

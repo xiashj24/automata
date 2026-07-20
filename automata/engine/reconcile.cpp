@@ -8,10 +8,14 @@
 
 namespace automata {
 
-void Reconciler::update(GraphDef def, Quantize quantize, float fade_seconds) {
+void Reconciler::update(GraphDef def,
+                        Quantize quantize,
+                        float fade_seconds,
+                        std::shared_ptr<void> owner) {
   stashed_ = Pending{.def = std::move(def),
                      .quantize = quantize,
-                     .fade_seconds = fade_seconds};
+                     .fade_seconds = fade_seconds,
+                     .owner = std::move(owner)};
   pump();
 }
 
@@ -21,6 +25,7 @@ void Reconciler::drain() {
     switch (msg.kind) {
       case OutMsg::Kind::RetiredGraph:
         delete msg.graph;
+        owners_.erase(msg.graph);  // after teardown: generation stays mapped
         break;
       case OutMsg::Kind::RetiredValues:
         delete[] msg.values;
@@ -76,6 +81,9 @@ void Reconciler::pump() {
   live_graph_ = graph;
   current_def_ = std::move(p.def);
   has_def_ = true;
+  if (p.owner != nullptr) {
+    owners_.emplace(graph, std::move(p.owner));
+  }
 }
 
 }  // namespace automata
