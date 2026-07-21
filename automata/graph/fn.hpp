@@ -91,6 +91,12 @@ inline const KernelInfo FnInfo3{
     .process = &fn_process3,
 };
 
+// True for this binary's fn-family infos — how the registry recognizes a
+// probe's fn nodes to key them by name (rebind.hpp).
+[[nodiscard]] inline bool is_fn_kernel(const KernelInfo* info) {
+  return info == &FnInfo1 || info == &FnInfo2 || info == &FnInfo3;
+}
+
 template <typename F>
 [[nodiscard]] Signal fn_node(const KernelInfo* info,
                              std::string_view name,

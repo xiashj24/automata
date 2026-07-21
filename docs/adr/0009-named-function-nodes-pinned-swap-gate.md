@@ -38,6 +38,15 @@ is the whole point of having one.
   it foreign (ADR 0001's custom-kernel path, no new machinery): the
   generation stays mapped while any graph using the node lives — bounded
   at one generation per live graph, the accepted custom-kernel deal.
+- **`fn` is also how stateless vocabulary is authored.** The registry keys
+  fn nodes by their name-folded node hash: a name the host probe
+  instantiated rebinds to the host's function pointer — op bytes
+  rewritten, generation free to unload — while an unprobed name misses
+  both lookups and stays pinned, which is what keeps the same call safe in
+  a patch. `soft_clip` and `frac` are written this way; kernel classes
+  remain for anything with state, parameters, or a reuse story (ADR 0005
+  unchanged: host-vocabulary status is about where the code lives, not how
+  it is written).
 - **A pinned def always swaps, never value-patches.** When an update
   arrives with an owner token, the reconciler skips the def-hash fast path
   and issues a full swap: the def carries code pointers into its own
@@ -52,6 +61,8 @@ is the whole point of having one.
 - (+) A one-line idea is a one-line node: `fn("fold", [](float x) {
   return x - std::floor(x + 0.5f); }, in)` — no struct, no factory, no
   registration.
+- (+) Stateless vocabulary sheds its kernel classes: the factory line *is*
+  the node, and joining the probe is the whole registration.
 - (+) Custom-kernel body edits now land; before this, an edit that kept
   the def hash was silently ignored.
 - (−) Patches using `fn` always pay a swap on reload, even for pure value

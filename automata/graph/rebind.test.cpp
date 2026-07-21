@@ -26,7 +26,12 @@ GraphDef full_vocabulary_def() {
     const Signal wet =
         soft_clip(filtered / 2.f) + (-filtered) + fb.read(0.25f) * 0.5f;
     fb.write(wet);
-    const Signal controlled = wet * param("gain", 0.5f) + mouse_x();
+    const Clock c = beat();
+    const Signal rhythm = (c / 2).swing(0.25f).trig() + c.gate(0.3f) +
+                          (c >> 0.5f).ramp() + seq(c, {1.f, 2.f}) +
+                          euclid(bar(), 3.f, 8.f, 1.f) + frac(osc);
+    const Signal controlled =
+        wet * param("gain", 0.5f) + mouse_x() + rhythm * 0.1f;
     g.out(controlled, controlled);
   });
 }
@@ -39,8 +44,11 @@ std::vector<std::unique_ptr<KernelInfo>> make_foreign(
   std::vector<std::unique_ptr<KernelInfo>> infos;
   for (GraphDef::Node& node : def.nodes) {
     infos.push_back(std::make_unique<KernelInfo>(*node.kernel));
+    const KernelRegistry::Entry* entry = registry.find(node.type_hash);
+    if (entry == nullptr) {
+      entry = registry.find(node.kernel->type_hash);
+    }
     node.kernel = infos.back().get();
-    const KernelRegistry::Entry* entry = registry.find(node.kernel->type_hash);
     if (entry != nullptr && entry->rewrite_op) {
       std::fill_n(def.op_data.begin() + node.op_begin, node.op_size,
                   std::byte{0xAB});
@@ -104,4 +112,24 @@ TEST_CASE("an unknown kernel stays foreign and is counted", "[rebind]") {
   const KernelRegistry registry = vocabulary_registry();
   CHECK(rebind_kernels(def, registry) == 1);
   CHECK(def.nodes[0].kernel == &custom);
+}
+
+TEST_CASE("a probed fn name rebinds; a patch-local one stays foreign",
+          "[rebind]") {
+  GraphDef def = describe([](GraphBuilder& g) {
+    const Signal known = soft_clip(0.5f);  // fn-based vocabulary
+    const Signal local =
+        fn("patch_only", [](float x) { return x + 1.f; }, known);
+    g.out(local, local);
+  });
+
+  const KernelRegistry registry = vocabulary_registry();
+  CHECK(rebind_kernels(def, registry) == 1);
+
+  // The vocabulary fn was rewritten to the host entry; the local one kept
+  // its own kernel and pointer.
+  const KernelRegistry::Entry* entry =
+      registry.find(def.nodes[1].type_hash);  // soft_clip node
+  REQUIRE(entry != nullptr);
+  CHECK(def.nodes[1].kernel == entry->kernel);
 }

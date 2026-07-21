@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <initializer_list>
 
 #include "automata/config.hpp"
@@ -13,7 +14,6 @@
 #include "automata/kernel/envelopes.hpp"
 #include "automata/kernel/oscillators.hpp"
 #include "automata/kernel/rhythm.hpp"
-#include "automata/kernel/shapers.hpp"
 #include "automata/kernel/svf.hpp"
 
 // The UGen vocabulary: one-statement factories (ADR 0005). Frequencies in Hz
@@ -44,8 +44,10 @@ inline Signal operator<(Signal a, Signal b) {
   return make_node<Less>(a, b);
 }
 
+// Stateless one-liners are fn nodes (ADR 0009) — no kernel class; the
+// probe registers each name so patches using them rebind and don't pin.
 [[nodiscard]] inline Signal frac(Signal in) {
-  return make_node<Frac>(in);
+  return fn("frac", [](float x) { return x - std::floor(x); }, in);
 }
 
 [[nodiscard]] inline Signal phasor(Signal freq_hz) {
@@ -98,7 +100,7 @@ inline Signal operator<(Signal a, Signal b) {
 }
 
 [[nodiscard]] inline Signal soft_clip(Signal in) {
-  return make_node<SoftClip>(in);
+  return fn("soft_clip", [](float x) { return std::tanh(x); }, in);
 }
 
 // The pointer as a control surface: 0..1 across the virtual desktop, y = 1
