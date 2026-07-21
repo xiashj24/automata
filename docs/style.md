@@ -80,7 +80,9 @@ an ADR governs a topic, the ADR wins.
 - Kernels are self-contained, trivially copyable objects (ADR 0005):
   state and coefficients are private members; the API is `process` and
   `reset` plus kernel-specific parameter setters, no pointers, no
-  allocation; state relocation is a memcpy of the object.
+  allocation; state relocation is a memcpy of the object. Setters take
+  physical units (Hz, seconds) and, when they derive coefficients, cache
+  their inputs so the derivation runs only on change (ADR 0010).
 
 ## Error handling (three tiers, xhal ADR 0003 lineage)
 

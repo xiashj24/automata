@@ -19,14 +19,10 @@
 #include "automata/kernel/smooth.hpp"
 #include "automata/kernel/svf.hpp"
 
-// The UGen vocabulary: one-statement factories (ADR 0005). Frequencies in Hz
-// and times in seconds convert here to the kernels' normalized units.
+// The UGen vocabulary: one-statement factories (ADR 0005). Kernels take Hz
+// and seconds directly (ADR 0010), so factories pass arguments through.
 
 namespace automata {
-
-namespace detail {
-inline constexpr float InvSampleRate = 1.f / static_cast<float>(SampleRate);
-}
 
 inline Signal operator+(Signal a, Signal b) {
   return make_node<Add>(a, b);
@@ -82,8 +78,7 @@ inline Signal operator>=(Signal a, Signal b) {
 }
 
 [[nodiscard]] inline Signal phasor(Signal freq_hz) {
-  return make_node<Phasor>().control(&Phasor::set_freq,
-                                     freq_hz * detail::InvSampleRate);
+  return make_node<Phasor>().control(&Phasor::set_freq, freq_hz);
 }
 
 [[nodiscard]] inline Signal sine(Signal freq_hz) {
@@ -113,12 +108,11 @@ inline Signal operator>=(Signal a, Signal b) {
 
 [[nodiscard]] inline Signal triangle(Signal freq_hz) {
   return fn("triangle", &tri_from_phase_aa, phasor(freq_hz),
-            freq_hz * detail::InvSampleRate);
+            freq_hz * InvSampleRate);
 }
 
 [[nodiscard]] inline Signal metro(Signal freq_hz) {
-  return make_node<Metro>().control(&Metro::set_freq,
-                                    freq_hz * detail::InvSampleRate);
+  return make_node<Metro>().control(&Metro::set_freq, freq_hz);
 }
 
 // High for the first len seconds of each period-second cycle — a
@@ -128,10 +122,9 @@ inline Signal operator>=(Signal a, Signal b) {
 }
 
 [[nodiscard]] inline Signal ar(Signal trig, Signal attack_s, Signal release_s) {
-  constexpr float Sr = static_cast<float>(SampleRate);
   return make_node<Ar>(trig)
-      .control(&Ar::set_attack, attack_s * Sr)
-      .control(&Ar::set_release, release_s * Sr);
+      .control(&Ar::set_attack, attack_s)
+      .control(&Ar::set_release, release_s);
 }
 
 // Exponential gate follower: rises toward 1 while gate is high, falls
@@ -139,17 +132,15 @@ inline Signal operator>=(Signal a, Signal b) {
 [[nodiscard]] inline Signal are(Signal gate,
                                 Signal attack_s,
                                 Signal release_s) {
-  constexpr float Sr = static_cast<float>(SampleRate);
   return make_node<Are>(gate)
-      .control(&Are::set_attack, attack_s * Sr)
-      .control(&Are::set_release, release_s * Sr);
+      .control(&Are::set_attack, attack_s)
+      .control(&Are::set_release, release_s);
 }
 
 // One-pole lowpass on a control signal, so stepped changes glide instead of
 // clicking; tau is the 1/e convergence time.
 [[nodiscard]] inline Signal smooth(Signal in, Signal tau_s = 0.02f) {
-  constexpr float Sr = static_cast<float>(SampleRate);
-  return make_node<Smooth>(in).control(&Smooth::set_tau, tau_s * Sr);
+  return make_node<Smooth>(in).control(&Smooth::set_tau, tau_s);
 }
 
 // Gain in decibels, converted at describe time — the lifted Const glides on
@@ -163,8 +154,7 @@ inline Signal operator>=(Signal a, Signal b) {
                                    Signal cutoff_hz,
                                    Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
-               resonance)
+      .control(&Svf::update_coeffs, cutoff_hz, resonance)
       .output(&Svf::Out::lp);
 }
 
@@ -172,8 +162,7 @@ inline Signal operator>=(Signal a, Signal b) {
                                    Signal cutoff_hz,
                                    Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
-               resonance)
+      .control(&Svf::update_coeffs, cutoff_hz, resonance)
       .output(&Svf::Out::bp);
 }
 
@@ -181,8 +170,7 @@ inline Signal operator>=(Signal a, Signal b) {
                                    Signal cutoff_hz,
                                    Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
-               resonance)
+      .control(&Svf::update_coeffs, cutoff_hz, resonance)
       .output(&Svf::Out::hp);
 }
 

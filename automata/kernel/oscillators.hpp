@@ -2,17 +2,19 @@
 
 #include <cmath>
 
+#include "automata/config.hpp"
+
 // Oscillator kernels (ADR 0005): self-contained, trivially copyable, no
-// engine types. Frequencies are normalized (cycles per sample); factories do
-// the Hz conversion. Waveforms are stateless phase shapers (shapers.hpp)
-// composed over Phasor, so the phase accumulator lives in one kernel and a
-// waveform edit preserves it.
+// engine types. Frequencies are in Hz, converted in the setters (ADR 0010).
+// Waveforms are stateless phase shapers (shapers.hpp) composed over Phasor,
+// so the phase accumulator lives in one kernel and a waveform edit
+// preserves it.
 
 namespace automata {
 
 class Phasor {
 public:
-  void set_freq(float cycles_per_sample) { w_ = cycles_per_sample; }
+  void set_freq(float hz) { w_ = hz / SampleRateF; }
 
   [[nodiscard]] float process() {
     const float out = p_;
@@ -32,7 +34,7 @@ private:
 // envelope starts at t = 0 rather than one period in.
 class Metro {
 public:
-  void set_freq(float cycles_per_sample) { w_ = cycles_per_sample; }
+  void set_freq(float hz) { w_ = hz / SampleRateF; }
 
   [[nodiscard]] float process() {
     float out = 0.f;

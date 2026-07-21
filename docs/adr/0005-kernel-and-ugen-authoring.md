@@ -164,7 +164,8 @@ specializations; and ADR 0002 requires state transfer to be a memcpy.
   a few redundant bytes per node, overwritten by the next `update_coeffs`.
 - (−) Setters run per sample by default — correct but costly (a `tan()`
   per filter per sample); the Const-fed hoist is the planned fix and
-  `process_block` the escape hatch.
+  `process_block` the escape hatch. *(Superseded: ADR 0010's cached
+  setter derivation replaced the hoist.)*
 - (−) The scoped-active-graph context is invisible state during describe;
   misuse (constructing Signals outside a patch entry) is caught by assert
   at runtime, not by the compiler. Accepted for the authoring ergonomics.

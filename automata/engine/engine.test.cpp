@@ -103,13 +103,13 @@ TEST_CASE("a structural swap transfers state: the sine keeps its phase",
   // Reference: the same phasor run uninterrupted, setter-then-process per
   // sample exactly as the graph executes it.
   Phasor k;
-  const float w = 375.f * (1.f / 48000.f);
+  constexpr float FreqHz = 375.f;
   for (int n = 0; n < 1280; ++n) {
-    k.set_freq(w);
+    k.set_freq(FreqHz);
     (void)k.process();
   }
   for (int n = 0; n < 1280; ++n) {
-    k.set_freq(w);
+    k.set_freq(FreqHz);
     const float expected = std::tanh(std::sin(TwoPi * k.process()));
     REQUIRE(buf[2 * n] == expected);
   }
@@ -137,13 +137,13 @@ TEST_CASE("a waveform edit keeps the phase: sine becomes saw",
   // Only the stateless shaper changed; the phasor pairs in the global match
   // pass, so the saw continues from the sine's accumulated phase.
   Phasor k;
-  const float w = 375.f * (1.f / 48000.f);
+  constexpr float FreqHz = 375.f;
   for (int n = 0; n < 1280; ++n) {
-    k.set_freq(w);
+    k.set_freq(FreqHz);
     (void)k.process();
   }
   for (int n = 0; n < 1280; ++n) {
-    k.set_freq(w);
+    k.set_freq(FreqHz);
     const float expected = 2.f * k.process() - 1.f;
     REQUIRE(buf[2 * n] == expected);
   }

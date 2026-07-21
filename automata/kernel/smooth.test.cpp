@@ -12,7 +12,7 @@ static_assert(std::is_trivially_copyable_v<automata::Smooth>);
 
 TEST_CASE("smooth converges exponentially on its tau", "[kernel][smooth]") {
   automata::Smooth s;
-  s.set_tau(100.f);
+  s.set_tau(100.f / automata::SampleRateF);  // tau of 100 samples
 
   float out = 0.f;
   for (int i = 0; i < 100; ++i) {

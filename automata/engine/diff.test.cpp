@@ -25,9 +25,9 @@ TEST_CASE("reordered statements pair by structure, not flat ordinal",
   REQUIRE(running.def_hash == incoming.def_hash);
 
   const auto values = remap_values(running, incoming);
-  // Running layout: sine's consts first (created first), then saw's.
+  // Running layout: sine's freq Const first (created first), then saw's.
   REQUIRE(values[0] == 550.f);
-  REQUIRE(values[2] == 330.f);
+  REQUIRE(values[1] == 330.f);
 }
 
 TEST_CASE("a wrapped output still matches its inner subtree",

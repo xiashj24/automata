@@ -15,7 +15,7 @@ static_assert(sizeof(automata::Svf::Out) == 3 * sizeof(float));
 
 TEST_CASE("lowpass passes DC, highpass blocks it", "[kernel][svf]") {
   automata::Svf f;
-  f.update_coeffs(1000.f / 48000.f, 0.707f);
+  f.update_coeffs(1000.f, 0.707f);
 
   automata::Svf::Out out{};
   for (int i = 0; i < 4800; ++i) {
@@ -30,7 +30,7 @@ TEST_CASE("lowpass passes DC, highpass blocks it", "[kernel][svf]") {
 TEST_CASE("higher normalized resonance rings longer", "[kernel][svf]") {
   const auto ring_energy = [](float resonance) {
     automata::Svf f;
-    f.update_coeffs(1000.f / 48000.f, resonance);
+    f.update_coeffs(1000.f, resonance);
     (void)f.process(1.f);  // impulse
     float energy = 0.f;
     for (int i = 0; i < 4800; ++i) {
@@ -43,7 +43,7 @@ TEST_CASE("higher normalized resonance rings longer", "[kernel][svf]") {
 
 TEST_CASE("state transfer is a whole-object copy", "[kernel][svf]") {
   automata::Svf a;
-  a.update_coeffs(2000.f / 48000.f, 0.75f);
+  a.update_coeffs(2000.f, 0.75f);
   for (int i = 0; i < 100; ++i) {
     (void)a.process(i % 7 == 0 ? 1.f : -0.25f);
   }
@@ -63,16 +63,16 @@ TEST_CASE("state transfer is a whole-object copy", "[kernel][svf]") {
 
 TEST_CASE("reset clears state", "[kernel][svf]") {
   automata::Svf f;
-  f.update_coeffs(500.f / 48000.f, 0.707f);
+  f.update_coeffs(500.f, 0.707f);
   for (int i = 0; i < 32; ++i) {
     (void)f.process(1.f);
   }
 
   f.reset();
-  f.update_coeffs(500.f / 48000.f, 0.707f);
+  f.update_coeffs(500.f, 0.707f);
 
   automata::Svf fresh;
-  fresh.update_coeffs(500.f / 48000.f, 0.707f);
+  fresh.update_coeffs(500.f, 0.707f);
   const auto a = f.process(1.f);
   const auto b = fresh.process(1.f);
   REQUIRE(a.lp == b.lp);

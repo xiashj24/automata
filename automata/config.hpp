@@ -12,6 +12,10 @@ namespace automata {
 inline constexpr std::uint32_t SampleRate = 48'000;
 inline constexpr std::size_t BlockSize = 128;
 
+// Float forms for kernel-side unit conversion (ADR 0010).
+inline constexpr float SampleRateF = static_cast<float>(SampleRate);
+inline constexpr float InvSampleRate = 1.f / SampleRateF;
+
 inline constexpr std::size_t MaxGraphNodes = 1024;
 
 // Audio↔control SPSC channel depths. The outbox is deeper: it also carries
