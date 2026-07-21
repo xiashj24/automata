@@ -5,6 +5,7 @@
 #include <bit>
 #include <cstdint>
 #include <limits>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <vector>
@@ -207,4 +208,38 @@ TEST_CASE("a malformed bundle keeps only the elements before the damage",
   std::vector<std::byte> header;
   put_padded_string(header, "#bundle");
   CHECK(apply_osc_packet(header, bus) == 0);
+}
+
+TEST_CASE("the observer sees every accepted write, by name and ordinal",
+          "[osc]") {
+  struct Write {
+    std::string name;
+    std::uint32_t ordinal;
+    float value;
+  };
+  std::vector<Write> seen;
+  const OscWriteObserver record = [](void* ctx, std::string_view name,
+                                     std::uint32_t ordinal, float value) {
+    static_cast<std::vector<Write>*>(ctx)->push_back(
+        {std::string{name}, ordinal, value});
+  };
+
+  ControlBus bus;
+  auto p = message("/pad", "ff");
+  put_big_endian(p, 0.25f);
+  put_big_endian(p, 0.75f);
+  REQUIRE(apply_osc_packet(p, bus, record, &seen) == 2);
+
+  REQUIRE(seen.size() == 2);
+  CHECK(seen[0].name == "pad");
+  CHECK(seen[0].ordinal == 0);
+  CHECK(seen[0].value == 0.25f);
+  CHECK(seen[1].name == "pad");
+  CHECK(seen[1].ordinal == 1);
+  CHECK(seen[1].value == 0.75f);
+
+  // A rejected message reports nothing.
+  seen.clear();
+  CHECK(apply_osc_packet(message("/bad", "q"), bus, record, &seen) == 0);
+  CHECK(seen.empty());
 }

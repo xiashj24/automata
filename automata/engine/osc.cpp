@@ -65,7 +65,9 @@ struct NumericArgs {
 
 // One message: commit to the bus only after the whole thing parses.
 [[nodiscard]] std::uint32_t apply_message(std::span<const std::byte> packet,
-                                          ControlBus& bus) {
+                                          ControlBus& bus,
+                                          OscWriteObserver observer,
+                                          void* context) {
   const std::byte* data = packet.data();
   const std::size_t total = packet.size();
   if (total < 4 || total % 4 != 0 || static_cast<char>(data[0]) != '/') {
@@ -191,7 +193,8 @@ struct NumericArgs {
   }
 
   const auto* chars = reinterpret_cast<const char*>(data);
-  const Hash base = hash_string(std::string_view{chars + 1, addr_len - 1});
+  const std::string_view name{chars + 1, addr_len - 1};
+  const Hash base = hash_string(name);
   std::uint32_t written = 0;
   for (std::size_t k = 0; k < args.count; ++k) {
     if (!args.finite[k]) {
@@ -199,12 +202,17 @@ struct NumericArgs {
     }
     bus.set(arg_slot_name(base, k), args.values[k]);
     ++written;
+    if (observer != nullptr) {
+      observer(context, name, static_cast<std::uint32_t>(k), args.values[k]);
+    }
   }
   return written;
 }
 
 [[nodiscard]] std::uint32_t apply_packet(std::span<const std::byte> packet,
                                          ControlBus& bus,
+                                         OscWriteObserver observer,
+                                         void* context,
                                          int depth) {
   constexpr std::string_view Header{"#bundle\0", 8};
   if (packet.size() >= Header.size() &&
@@ -226,20 +234,23 @@ struct NumericArgs {
           pos + static_cast<std::size_t>(size) > packet.size()) {
         return written;
       }
-      written += apply_packet(
-          packet.subspan(pos, static_cast<std::size_t>(size)), bus, depth + 1);
+      written +=
+          apply_packet(packet.subspan(pos, static_cast<std::size_t>(size)), bus,
+                       observer, context, depth + 1);
       pos += static_cast<std::size_t>(size);
     }
     return written;
   }
-  return apply_message(packet, bus);
+  return apply_message(packet, bus, observer, context);
 }
 
 }  // namespace
 
 std::uint32_t apply_osc_packet(std::span<const std::byte> packet,
-                               ControlBus& bus) {
-  return apply_packet(packet, bus, 0);
+                               ControlBus& bus,
+                               OscWriteObserver observer,
+                               void* context) {
+  return apply_packet(packet, bus, observer, context, 0);
 }
 
 }  // namespace automata

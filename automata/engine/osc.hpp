@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 #include "automata/core/control_bus.hpp"
 
@@ -17,7 +18,18 @@
 
 namespace automata {
 
-[[nodiscard]] std::uint32_t apply_osc_packet(std::span<const std::byte> packet,
-                                             ControlBus& bus);
+// Observes each slot write: the address (leading '/' stripped), the
+// numeric-argument ordinal (0 writes `name`, k ≥ 1 writes `name/k`), and
+// the value. Runs on the caller's thread — control side, never audio.
+using OscWriteObserver = void (*)(void* context,
+                                  std::string_view name,
+                                  std::uint32_t ordinal,
+                                  float value);
+
+[[nodiscard]] std::uint32_t apply_osc_packet(
+    std::span<const std::byte> packet,
+    ControlBus& bus,
+    OscWriteObserver observer = nullptr,
+    void* context = nullptr);
 
 }  // namespace automata

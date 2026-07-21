@@ -63,6 +63,12 @@ sanitizes NaN — which is sticky once it enters smoother state.
   desktop — y = 1 at the top, the theremin convention, not the screen's;
   `mouse_x()` / `mouse_y()` are `param` sugar with centered fallbacks. Platforms without an implementation are a no-op
   and patches still render — the pluggable-sources property.
+- **Reserved names also flow the other way: `bpm` steers the transport.**
+  The host's control tick reads the `bpm` slot and forwards changes
+  (clamped 20–300) to the engine as `SetBpm` — the OSC thread never
+  touches the engine inbox, whose single producer is the control loop.
+  Every accepted OSC write is echoed to the console; the log is the
+  confirmation a controller reached the bus.
 
 ## Consequences
 

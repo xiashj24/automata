@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdio>
 #include <span>
 
 #include "automata/engine/osc.hpp"
@@ -118,6 +119,18 @@ OscListener::~OscListener() {
 }
 
 void OscListener::receive_loop() {
+  // Every accepted write is echoed — the console is the confirmation that a
+  // controller reached the bus.
+  const OscWriteObserver echo = [](void*, std::string_view name,
+                                   std::uint32_t ordinal, float value) {
+    if (ordinal == 0) {
+      std::printf("[osc] %.*s = %g\n", static_cast<int>(name.size()),
+                  name.data(), static_cast<double>(value));
+    } else {
+      std::printf("[osc] %.*s/%u = %g\n", static_cast<int>(name.size()),
+                  name.data(), ordinal, static_cast<double>(value));
+    }
+  };
   std::array<std::byte, 4096> buffer;
   while (!stop_.load()) {
     const int received = receive_datagram(socket_, buffer);
@@ -125,7 +138,7 @@ void OscListener::receive_loop() {
       continue;
     }
     (void)apply_osc_packet({buffer.data(), static_cast<std::size_t>(received)},
-                           bus_);
+                           bus_, echo, nullptr);
   }
 }
 

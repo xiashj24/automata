@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <atomic>
 #include <charconv>
 #include <chrono>
@@ -200,8 +201,14 @@ void reload(const Options& options,
       return EXIT_FAILURE;
     }
     osc = std::move(*listener);
-    std::printf("[host] OSC listening on udp/%u\n", osc->port());
+    std::printf("[host] OSC listening on udp/%u (params + /bpm)\n",
+                osc->port());
   }
+
+  // /bpm is a reserved slot bridged to the transport: this loop is the
+  // inbox's single producer, so the OSC thread must go through the bus.
+  automata::ControlBus::Slot* bpm_slot = engine.bus().channel("bpm");
+  float bpm_seen = 0.f;
 
   auto device = automata::host::AudioDevice::start(engine);
   if (!device.has_value()) {
@@ -216,6 +223,17 @@ void reload(const Options& options,
   automata::Hash live_def_hash = 0;
   while (!g_stop.load()) {
     automata::host::poll_mouse(engine.bus());
+    if (bpm_slot != nullptr) {
+      const float requested = bpm_slot->read_or(0.f);
+      if (requested > 0.f && requested != bpm_seen) {
+        const float bpm = std::clamp(requested, 20.f, 300.f);
+        if (engine.inbox().try_push(
+                {.kind = automata::InMsg::Kind::SetBpm, .bpm = bpm})) {
+          bpm_seen = requested;  // a full inbox retries on the next tick
+          std::printf("[host] bpm -> %g\n", static_cast<double>(bpm));
+        }
+      }
+    }
     if (watcher.poll()) {
       reload(options, pool, registry, reconciler, watcher, live_def_hash);
     }
