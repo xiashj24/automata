@@ -22,6 +22,9 @@ time base, 0005 kernel/UGen authoring.
 
 ## Designing a UGen or engine change
 
+- Adding a UGen follows the /new-ugen skill
+  (.claude/skills/new-ugen/SKILL.md): prior-art survey, shape choice,
+  unit and cached-setter idioms, probe registration, tests, live smoke.
 - Survey the reference submodules in reference/ for prior art first
   (SuperCollider, Csound, Faust libraries, Gamma, DaisySP, Soundpipe,
   signalsmith, sst-*, …) and synthesize approaches before writing code.
