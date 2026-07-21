@@ -88,6 +88,18 @@ weighs and partly replaces.
   rotation-equivalent to the Bjorklund necklaces. Integer-only per query,
   no pattern buffer to rebuild on a parameter change, real-time safe by
   construction.
+- **The patch surface is a `Clock` wrapper, kept from the first attempt.**
+  `clock(beats)` / `beat()` / `bar()` return a describe-time wrapper over
+  the phase Signal that remembers its cycle length in beats. Rate algebra
+  rebuilds clocks on the transport grid — `c / 2`, `c * 4` are new `clock`
+  nodes, alignment-exact and patchable, not wrap counters — `c >> k`
+  rotates phase, and `.trig()`, `.gate(width)`, `.swing(amount)` derive
+  events, so rhythm reads as `(beat() * 2).swing(0.6).trig()`. Pure sugar:
+  it compiles to the ordinary nodes above and never appears in the graph,
+  so identity and hashing are untouched. Any ramp Signal wraps (a
+  free-running metro is a Clock too), but the rate algebra asserts
+  transport lineage at describe time — dividing a ramp needs absolute
+  position, which an arbitrary ramp doesn't carry.
 
 ## Consequences
 
