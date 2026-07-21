@@ -21,10 +21,6 @@ an approach — don't transplant the first one found:
   sst-filters / sst-waveshapers / sst-effects (production filter and
   shaper math), vital (wavetables, modulation), airwindows (character
   effects), music-dsp (the mailing-list archive of classic algorithms).
-- The first attempt (the xlib repo, when available) often has a proven
-  automata-shaped version — worth checking, and its kernels follow the
-  same conventions.
-
 Reference code is never linked or copied wholesale (ADR 0005): kernels are
 rewritten dependency-free in project convention. Note where the algorithm
 came from in one comment line (e.g. "cycfi::q's poly_blamp").
