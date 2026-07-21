@@ -1,0 +1,15 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        // Saving patches/<name>.cpp rebuilds the <name> patch target; the
+        // running host picks up the fresh DLL on its next poll.
+        "match": "patches[\\\\/].*\\.cpp$",
+        "cmd": "cmake --build \"${workspaceFolder}\\build\" --target ${fileBasenameNoExt}",
+        "message": "building patch ${fileBasenameNoExt}…",
+        "showElapsed": true,
+        "autoShowOutputPanel": "error"
+      }
+    ]
+  }
+}

@@ -88,8 +88,8 @@ inline Signal operator-(Signal a) {
   return make_node<SoftClip>(in);
 }
 
-// The pointer as a control surface: 0..1 across the virtual desktop, y
-// growing downward. The host polls the cursor into these slots.
+// The pointer as a control surface: 0..1 across the virtual desktop, y = 1
+// at the top. The host polls the cursor into these slots.
 [[nodiscard]] inline Signal mouse_x() {
   return param("mouse/x", 0.5f);
 }

@@ -27,8 +27,10 @@ void poll_mouse(ControlBus& bus) {
   };
   bus.set("mouse/x",
           normalized(point.x, GetSystemMetrics(SM_XVIRTUALSCREEN), width));
-  bus.set("mouse/y",
-          normalized(point.y, GetSystemMetrics(SM_YVIRTUALSCREEN), height));
+  // Musical convention, not the screen's: up is 1.
+  bus.set(
+      "mouse/y",
+      1.f - normalized(point.y, GetSystemMetrics(SM_YVIRTUALSCREEN), height));
 }
 
 #else

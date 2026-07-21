@@ -11,8 +11,9 @@
 // ordinary symbols here, called exactly the way the host calls them after
 // GetProcAddress — stamp first, then describe into a caller-owned builder.
 
+using namespace automata;
+
 AUTOMATA_PATCH(g) {
-  using namespace automata;
   auto lfo = sine(0.25f);
   auto env = ar(metro(2.0f), 0.005f, 0.12f);
   auto voice = svf_lp(saw(110.0f), 800.0f + lfo * 600.0f, 0.7f) * env;

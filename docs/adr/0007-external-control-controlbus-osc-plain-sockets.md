@@ -60,8 +60,8 @@ sanitizes NaN — which is sticky once it enters smoother state.
   poison a ramp.
 - **The mouse is just reserved names.** The host polls the cursor each
   control tick into `mouse/x` / `mouse/y`, normalized 0..1 over the virtual
-  desktop, y growing downward; `mouse_x()` / `mouse_y()` are `param` sugar
-  with centered fallbacks. Platforms without an implementation are a no-op
+  desktop — y = 1 at the top, the theremin convention, not the screen's;
+  `mouse_x()` / `mouse_y()` are `param` sugar with centered fallbacks. Platforms without an implementation are a no-op
   and patches still render — the pluggable-sources property.
 
 ## Consequences

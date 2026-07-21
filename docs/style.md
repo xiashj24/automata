@@ -10,8 +10,8 @@ an ADR governs a topic, the ADR wins.
   suitable; avoid `extern` variable exports.
 - All library code lives in `namespace automata`; internal helpers in
   `automata::detail`. No `using namespace` at global scope in headers
-  (patch `.cpp` files may use it inside their entry point — authoring
-  ergonomics is the product there).
+  (patch `.cpp` files use it at file scope, above `AUTOMATA_PATCH` —
+  authoring ergonomics is the product there).
 - Types (classes, structs, enums, aliases, concepts): `PascalCase`.
 - Functions and variables: `snake_case`; private data members take a
   trailing underscore (`head_`).
