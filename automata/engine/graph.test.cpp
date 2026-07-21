@@ -111,3 +111,35 @@ TEST_CASE("metro drives an ar envelope", "[engine][graph]") {
   REQUIRE(in_bounds);
   REQUIRE(peak == Approx(1.f));
 }
+
+TEST_CASE("fn wraps a captureless function into a stateless node",
+          "[engine][graph]") {
+  Graph graph(describe([](GraphBuilder& g) {
+    const Signal halved = fn("half", [](float x) { return x * 0.5f; }, 0.8f);
+    const Signal mixed =
+        fn("mix", [](float a, float b) { return a + 2.f * b; }, 0.25f, 0.5f);
+    g.out(halved, mixed);
+  }));
+
+  graph.process_block();
+
+  REQUIRE(graph.left()[0] == Approx(0.4f));
+  REQUIRE(graph.right()[0] == Approx(1.25f));
+}
+
+TEST_CASE("fn identity is its name, not its body", "[engine][graph]") {
+  const auto def_with = [](std::string_view name, float (*f)(float)) {
+    return describe([&](GraphBuilder& g) {
+      const Signal s = fn(name, f, 0.5f);
+      g.out(s, s);
+    });
+  };
+  REQUIRE(def_with(
+              "gain", +[](float x) { return x * 2.f; })
+              .def_hash ==
+          def_with("gain", +[](float x) { return x * 3.f; }).def_hash);
+  REQUIRE(def_with(
+              "gain", +[](float x) { return x * 2.f; })
+              .def_hash !=
+          def_with("drive", +[](float x) { return x * 2.f; }).def_hash);
+}

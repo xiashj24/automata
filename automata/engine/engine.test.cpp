@@ -353,17 +353,55 @@ TEST_CASE("an owner token is released only when its graph retires",
   rec.drain();
   REQUIRE(owner.use_count() == 2);  // held for the live graph
 
-  // A value patch builds no graph: its owner drops immediately.
+  // A pinned def-equal update swaps (ADR 0009): the new graph holds its
+  // token, the retired first graph releases the old one.
   auto patch_owner = std::make_shared<int>(0);
   rec.update(const_def(0.9f), Quantize::Immediate, 0.f, patch_owner);
+  (void)run(engine, 2 * BlockSize);
+  rec.drain();
+  REQUIRE(patch_owner.use_count() == 2);
+  REQUIRE(owner.use_count() == 1);
+
+  // An ownerless def-equal update stays a value patch: no graph is built,
+  // and the live pinned graph keeps its token.
+  rec.update(const_def(0.7f), Quantize::Immediate, 0.f);
   (void)run(engine, BlockSize);
   rec.drain();
-  REQUIRE(patch_owner.use_count() == 1);
-  REQUIRE(owner.use_count() == 2);  // the live graph still pins its producer
+  REQUIRE(patch_owner.use_count() == 2);
 
-  // A structural swap retires the first graph and with it the token.
+  // A structural swap retires the pinned graph and with it the token.
   rec.update(mul_def(0.5f, 1.f), Quantize::Immediate, 0.f);
   (void)run(engine, 2 * BlockSize);
   rec.drain();
-  REQUIRE(owner.use_count() == 1);
+  REQUIRE(patch_owner.use_count() == 1);
+}
+
+TEST_CASE("a pinned body edit lands even when the def hash is unchanged",
+          "[engine][reconcile]") {
+  Engine engine;
+  Reconciler rec(engine);
+  const auto def_with = [](float (*f)(float)) {
+    return describe([&](GraphBuilder& g) {
+      const Signal s = fn("gain", f, 0.5f);
+      g.out(s, s);
+    });
+  };
+
+  GraphDef doubled = def_with(+[](float x) { return x * 2.f; });
+  GraphDef tripled = def_with(+[](float x) { return x * 3.f; });
+  REQUIRE(doubled.def_hash == tripled.def_hash);  // the edit is body-only
+
+  rec.update(std::move(doubled), Quantize::Immediate, 0.f,
+             std::make_shared<int>(1));
+  (void)run(engine, 256);
+  rec.drain();
+  REQUIRE(run(engine, BlockSize)[0] == 1.f);
+
+  // An owner marks the def as carrying its own code: the reconciler must
+  // swap, not value-patch, or the new body never runs.
+  rec.update(std::move(tripled), Quantize::Immediate, 0.f,
+             std::make_shared<int>(2));
+  (void)run(engine, 256);
+  rec.drain();
+  REQUIRE(run(engine, BlockSize)[0] == 1.5f);
 }

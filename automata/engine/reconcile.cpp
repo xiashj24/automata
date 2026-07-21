@@ -45,7 +45,11 @@ void Reconciler::pump() {
   Pending p = std::move(*stashed_);
   stashed_.reset();
 
-  if (has_def_ && p.def.def_hash == current_def_.def_hash) {
+  // A pinned def carries code pointers into its own generation: even with
+  // an identical hash it must swap so the fresh code lands — the transfer
+  // plan matches every node, so state still carries over.
+  if (has_def_ && p.def.def_hash == current_def_.def_hash &&
+      p.owner == nullptr) {
     auto remapped = remap_values(current_def_, p.def);
     auto* table = new float[remapped.size()];
     std::copy(remapped.begin(), remapped.end(), table);

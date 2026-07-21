@@ -18,5 +18,8 @@ AUTOMATA_PATCH(g) {
   auto bass_voice = svf_lp(bass, 400.f + mouse_y() * 2000.f, 0.8f);
 
   auto mix = kick * 0.9f + hat + bass_voice;
-  g.out(soft_clip(mix), soft_clip(mix));
+  auto out = fn(
+      "drive", [](float x) { return x / (1.f + (x < 0.f ? -x : x)); },
+      mix * 1.5f);
+  g.out(out, out);
 }

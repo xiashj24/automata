@@ -4,6 +4,7 @@
 
 #include "automata/config.hpp"
 #include "automata/graph/clock.hpp"
+#include "automata/graph/fn.hpp"
 #include "automata/graph/make_node.hpp"
 #include "automata/graph/param.hpp"
 #include "automata/graph/sequence.hpp"

@@ -167,7 +167,9 @@ void reload(const Options& options,
   automata::GraphDef def = builder.build();
   const std::uint32_t foreign = rebind_kernels(def, registry);
 
-  const char* landing = def.def_hash == live_def_hash ? "values" : "swap";
+  // A pinned def swaps even on an identical hash (ADR 0009).
+  const char* landing =
+      def.def_hash == live_def_hash && foreign == 0 ? "values" : "swap";
   std::printf("[host] gen %llu: %zu nodes -> %s%s\n",
               static_cast<unsigned long long>(gen->id()), def.nodes.size(),
               landing,

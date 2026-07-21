@@ -9,7 +9,8 @@
 #include "automata/graph/def.hpp"
 
 // The control-thread half of two-tier reconciliation (ADR 0002/0003).
-// update() takes any new def: an identical-hash def becomes a value patch,
+// update() takes any new def: an identical-hash def becomes a value patch —
+// unless it carries an owner, whose code pointers must land, so it swaps —
 // anything else a structural swap. Swaps are serialized — a newer def
 // arriving while one is in flight replaces the stashed one (last writer
 // wins), and is issued once the engine acks via SwapDone. drain() must be
@@ -17,8 +18,7 @@
 //
 // An optional owner rides along with the def and is released when the Graph
 // built from it retires — how a custom-kernel patch's generation stays
-// mapped exactly as long as code from it can run (ADR 0001). A def that
-// lands as a value patch builds no graph, so its owner drops immediately.
+// mapped exactly as long as code from it can run (ADR 0001).
 
 namespace automata {
 
