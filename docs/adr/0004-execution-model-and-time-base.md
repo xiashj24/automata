@@ -31,6 +31,8 @@ advance by samples rendered, never wall clock.
   by ≥ one block of delay stays block-mode, because the tap buffer already
   carries the dependency across the block boundary. The whole graph never
   degrades for one tight loop — refinement over the old all-or-nothing rule.
+  (Implemented by ADR 0011: `graph/schedule.hpp` plus the Graph's op-table
+  executor.)
 - **Sample rate and block size stay compile-time constants** in
   `automata/config.hpp` (defaults 48 kHz / 128). Explicitly re-chosen, not
   inherited: it keeps every kernel loop, buffer size, and transport

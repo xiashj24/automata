@@ -17,6 +17,7 @@
 #include "automata/engine/reconcile.hpp"
 #include "automata/graph/builder.hpp"
 #include "automata/graph/rebind.hpp"
+#include "automata/graph/schedule.hpp"
 #include "automata/ugens/vocabulary.hpp"
 #include "host/audio.hpp"
 #include "host/generation.hpp"
@@ -143,7 +144,7 @@ void reload(const Options& options,
             const automata::KernelRegistry& registry,
             automata::Reconciler& reconciler,
             automata::host::FileWatcher& watcher,
-            automata::Hash& live_def_hash) {
+            automata::GraphDef& live_def) {
   auto loaded = pool.load(options.dll);
   if (!loaded.has_value()) {
     // A copy that failed mid-write retries on the next poll; anything else
@@ -167,14 +168,37 @@ void reload(const Options& options,
   automata::GraphDef def = builder.build();
   const std::uint32_t foreign = rebind_kernels(def, registry);
 
-  // A pinned def swaps even on an identical hash (ADR 0009).
+  // A pinned def swaps even on an identical hash (ADR 0009), as does a
+  // value edit that flips a feedback cycle's execution mode (ADR 0011).
   const char* landing =
-      def.def_hash == live_def_hash && foreign == 0 ? "values" : "swap";
-  std::printf("[host] gen %llu: %zu nodes -> %s%s\n",
-              static_cast<unsigned long long>(gen->id()), def.nodes.size(),
-              landing,
-              foreign > 0 ? " (custom kernels: generation pinned)" : "");
-  live_def_hash = def.def_hash;
+      def.def_hash == live_def.def_hash && foreign == 0 &&
+              automata::detail::schedule_equivalent(live_def, def)
+          ? "values"
+          : "swap";
+  const automata::detail::Schedule sched =
+      automata::detail::compute_schedule(def);
+  std::size_t islands = 0;
+  std::size_t island_nodes = 0;
+  for (const auto& seg : sched.segments) {
+    if (seg.island) {
+      ++islands;
+      island_nodes += seg.end - seg.begin;
+    }
+  }
+  char island_note[64] = "";
+  if (sched.whole_graph_island) {
+    std::snprintf(island_note, sizeof(island_note),
+                  " | whole graph sample-serial");
+  } else if (islands > 0) {
+    std::snprintf(island_note, sizeof(island_note),
+                  " | %zu island%s: %zu nodes sample-serial", islands,
+                  islands > 1 ? "s" : "", island_nodes);
+  }
+  std::printf(
+      "[host] gen %llu: %zu nodes -> %s%s%s\n",
+      static_cast<unsigned long long>(gen->id()), def.nodes.size(), landing,
+      foreign > 0 ? " (custom kernels: generation pinned)" : "", island_note);
+  live_def = def;
 
   reconciler.update(
       std::move(def), options.quantize, options.fade_seconds,
@@ -222,7 +246,7 @@ void reload(const Options& options,
               static_cast<int>(name.size()), name.data(), automata::SampleRate,
               options.dll.string().c_str());
 
-  automata::Hash live_def_hash = 0;
+  automata::GraphDef live_def;
   while (!g_stop.load()) {
     automata::host::poll_mouse(engine.bus());
     if (bpm_slot != nullptr) {
@@ -237,7 +261,7 @@ void reload(const Options& options,
       }
     }
     if (watcher.poll()) {
-      reload(options, pool, registry, reconciler, watcher, live_def_hash);
+      reload(options, pool, registry, reconciler, watcher, live_def);
     }
     reconciler.drain();
     pool.collect();

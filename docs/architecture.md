@@ -144,9 +144,9 @@ def:
   The faded-out graph goes to the outbox for control-thread destruction.
 
 Feedback uses `Tap`: a write node owning a short delay buffer and read nodes
-with fractional (interpolated) offsets. A named tap (`g.tap("x")`) hashes by
-name — the explicit-identity escape hatch; an anonymous tap hashes by
-creation ordinal and is documented as fragile under reordering edits.
+with fractional (Hermite-interpolated) offsets. A named tap (`g.tap("x")`)
+hashes by name — the explicit-identity escape hatch; an anonymous tap hashes
+by creation ordinal and is documented as fragile under reordering edits.
 
 ## Execution model and time base (ADR 0004)
 
@@ -155,12 +155,15 @@ Sample rate and block size are compile-time constants (`automata/config.hpp`,
 offline rendering uses the same constants.
 
 A `Graph`'s schedule is the condensation of its nodes into strongly
-connected components, in topological order. Acyclic regions run block-mode
-(each node processes a full block into its pooled buffer). A component that
-contains a feedback cycle whose minimum tap delay is shorter than one block
-runs as a sample-serial island; cycles fully decoupled by ≥ one block of
-delay stay block-mode. Only the parts that need per-sample execution pay for
-it.
+connected components, in topological order (`graph/schedule.hpp`, ADR 0011).
+Acyclic regions run block-mode (each node processes a full block into its
+pooled buffer). A component that contains a feedback cycle whose minimum tap
+delay is shorter than one block — or whose delay is modulated — runs as a
+sample-serial island where `read(0)` is a true z⁻¹; cycles decoupled by a
+Const of ≥ one block stay block-mode. A tap read outside any cycle schedules
+after its write and is sample-exact at any delay ≥ 0. Only the parts that
+need per-sample execution pay for it; a value edit that flips a cycle's mode
+escalates to a structural swap, since the schedule is baked into the Graph.
 
 `Engine::render(out, nframes)` is a plain function of (state, nframes):
 drain the inbox, advance the schedule, push retirements to the outbox. The

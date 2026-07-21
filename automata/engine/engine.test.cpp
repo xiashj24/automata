@@ -265,6 +265,146 @@ TEST_CASE("a tapped patch swaps with its delay memory intact",
   REQUIRE(buf[2 * 6000] == Approx(std::tanh(0.5f)));
 }
 
+TEST_CASE("a single-sample feedback loop decays per sample",
+          "[engine][island]") {
+  const auto pcm = render_interleaved(describe([](GraphBuilder& g) {
+                                        auto fb = g.tap("fb");
+                                        auto wet =
+                                            metro(0.4f) + fb.read() * 0.5f;
+                                        fb.write(wet);
+                                        g.out(wet, wet);
+                                      }),
+                                      256);
+  // read() is a true z^-1: y[n] = x[n] + 0.5 y[n-1], exact powers of two.
+  REQUIRE(pcm[0] == 1.f);
+  REQUIRE(pcm[2 * 1] == 0.5f);
+  REQUIRE(pcm[2 * 2] == 0.25f);
+  REQUIRE(pcm[2 * 3] == 0.125f);
+  REQUIRE(pcm[2 * 10] == Approx(std::pow(0.5f, 10.f)));
+}
+
+TEST_CASE("a sub-block echo loop is sample-accurate", "[engine][island]") {
+  // 0.002 s = 96 samples — shorter than a block, impossible before islands.
+  const auto pcm =
+      render_interleaved(describe([](GraphBuilder& g) {
+                           auto fb = g.tap("fb");
+                           auto wet = metro(0.4f) + fb.read(0.002f) * 0.5f;
+                           fb.write(wet);
+                           g.out(wet, wet);
+                         }),
+                         1024);
+  REQUIRE(pcm[0] == 1.f);
+  REQUIRE(pcm[2 * 96] == Approx(0.5f).margin(1e-3f));
+  REQUIRE(pcm[2 * 192] == Approx(0.25f).margin(1e-3f));
+  REQUIRE(pcm[2 * 50] == Approx(0.f).margin(1e-4f));
+  REQUIRE(pcm[2 * 150] == Approx(0.f).margin(1e-4f));
+}
+
+TEST_CASE("a sub-block delay outside a cycle is sample-exact",
+          "[engine][island]") {
+  const auto pcm = render_interleaved(describe([](GraphBuilder& g) {
+                                        auto d = g.tap("d");
+                                        d.write(metro(0.4f));
+                                        auto y = d.read(10.f / SampleRateF);
+                                        g.out(y, y);
+                                      }),
+                                      256);
+  REQUIRE(pcm[2 * 10] == Approx(1.f).margin(1e-3f));
+  REQUIRE(pcm[0] == Approx(0.f).margin(1e-4f));
+  REQUIRE(pcm[2 * 30] == Approx(0.f).margin(1e-4f));
+
+  // Zero delay after the write is a passthrough.
+  const auto thru = render_interleaved(describe([](GraphBuilder& g) {
+                                         auto d = g.tap("d");
+                                         d.write(metro(0.4f));
+                                         auto y = d.read(0.f);
+                                         g.out(y, y);
+                                       }),
+                                       256);
+  REQUIRE(thru[0] == 1.f);
+  REQUIRE(thru[2 * 1] == 0.f);
+}
+
+TEST_CASE("an island renders deterministically offline", "[engine][island]") {
+  const auto def = [] {
+    return describe([](GraphBuilder& g) {
+      auto fb = g.tap("fb");
+      auto wet = metro(2.f) + fb.read(0.002f) * 0.9f;
+      fb.write(wet);
+      g.out(wet, wet);
+    });
+  };
+  REQUIRE(render_interleaved(def(), 2048) == render_interleaved(def(), 2048));
+}
+
+TEST_CASE("editing a tap delay across the block threshold escalates to a swap",
+          "[engine][island][reconcile]") {
+  const auto echo_def = [](float delay) {
+    return describe([&](GraphBuilder& g) {
+      auto fb = g.tap("fb");
+      auto wet = metro(2.5f) + fb.read(delay) * 0.5f;  // fires every 19200
+      fb.write(wet);
+      g.out(wet, wet);
+    });
+  };
+  REQUIRE(echo_def(0.25f).def_hash == echo_def(0.002f).def_hash);
+
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(echo_def(0.25f));
+  (void)run(engine, BlockSize);
+  rec.drain();
+
+  // Same hash, but the cycle flips from block-mode to sample-serial: the
+  // reconciler must rebuild the graph instead of patching values.
+  rec.update(echo_def(0.002f), Quantize::Immediate, 0.f);
+  const auto buf = run(engine, 20000);
+  rec.drain();
+
+  // The metro fires again near absolute sample 19200 (its phase accumulates
+  // float error, so find it); with the delay settled at 96 samples the echo
+  // lands 96 later — inside a block. A value-patched graph would still
+  // floor the read at one block and echo at +128 instead.
+  std::size_t imp = 0;
+  for (std::size_t i = 18900; i < 19500; ++i) {
+    if (buf[2 * i] > 0.9f) {
+      imp = i;
+      break;
+    }
+  }
+  REQUIRE(imp != 0);
+  REQUIRE(buf[2 * (imp + 96)] == Approx(0.5f).margin(2e-3f));
+  REQUIRE(buf[2 * (imp + 128)] == Approx(0.f).margin(2e-3f));
+}
+
+TEST_CASE("an island patch swaps with its loop state intact",
+          "[engine][island][reconcile]") {
+  const auto loop_def = [](bool clipped) {
+    return describe([&](GraphBuilder& g) {
+      auto fb = g.tap("fb");
+      auto wet = metro(0.4f) + fb.read(0.002f) * 0.9f;
+      fb.write(wet);
+      auto l = clipped ? soft_clip(wet) : wet;
+      g.out(l, l);
+    });
+  };
+
+  Engine engine;
+  Reconciler rec(engine);
+  rec.update(loop_def(false));
+  (void)run(engine, 640);  // echo train at 96k is in the loop
+  rec.drain();
+
+  rec.update(loop_def(true), Quantize::Immediate, 0.f);
+  const auto buf = run(engine, 640);
+  rec.drain();
+
+  // The next echoes arrive on schedule through the swap: absolute samples
+  // 672 and 768 are indices 32 and 128 here.
+  REQUIRE(buf[2 * 32] == Approx(std::tanh(std::pow(0.9f, 7.f))).margin(5e-3f));
+  REQUIRE(buf[2 * 128] == Approx(std::tanh(std::pow(0.9f, 8.f))).margin(5e-3f));
+}
+
 TEST_CASE("a param plays its fallback until the bus is written, then glides",
           "[engine][param]") {
   Engine engine;

@@ -9,6 +9,7 @@
 #include "automata/graph/clock.hpp"
 #include "automata/graph/kernel_info.hpp"
 #include "automata/graph/param.hpp"
+#include "automata/graph/schedule.hpp"
 #include "automata/graph/tap.hpp"
 
 namespace automata {
@@ -78,15 +79,78 @@ Graph::Graph(GraphDef def, ControlBus* bus, const Transport* transport)
   for (std::size_t i = 0; i < def_.inputs.size(); ++i) {
     input_ptrs_[i] = buffers_.data() + def_.inputs[i] * BlockSize;
   }
+
+  // Schedule and op table (ADR 0011). island_ptrs_ must reach its final
+  // size before any op keeps a pointer into it.
+  const detail::Schedule sched = detail::compute_schedule(def_);
+  island_ptrs_ = input_ptrs_;
+  ops_.resize(count);
+  segments_.reserve(sched.segments.size());
+  for (const detail::Schedule::Segment& seg : sched.segments) {
+    Segment segment{
+        .begin = seg.begin,
+        .end = seg.end,
+        .inputs_begin = static_cast<std::uint32_t>(island_inputs_.size()),
+        .inputs_end = 0,
+        .island = seg.island ? std::uint8_t{1} : std::uint8_t{0}};
+    for (std::uint32_t k = seg.begin; k < seg.end; ++k) {
+      const std::uint32_t v = sched.order[k];
+      const GraphDef::Node& node = def_.nodes[v];
+      Op& op = ops_[k];
+      op.process = node.kernel->process;
+      if (node.kernel == &detail::TapReadInfo) {
+        switch (sched.read_modes[v]) {
+          case detail::TapReadMode::PreWrite:
+            op.process = &detail::tap_read_process;
+            break;
+          case detail::TapReadMode::PostWrite:
+            op.process = &detail::tap_read_post_write_process;
+            break;
+          case detail::TapReadMode::Island:
+            op.process = &detail::tap_read_island_process;
+            break;
+          case detail::TapReadMode::None:
+            atm_assert(false);  // every read gets a scheduled mode
+            break;
+        }
+      }
+      op.state = state_ptrs_[v];
+      op.ins =
+          (seg.island ? island_ptrs_ : input_ptrs_).data() + node.input_begin;
+      op.op_bytes = def_.op_data.data() + node.op_begin;
+      op.values = values_.data() + node.value_begin;
+      op.out = buffers_.data() + v * BlockSize;
+      if (seg.island) {
+        for (std::uint32_t j = 0; j < node.input_count; ++j) {
+          island_inputs_.push_back(node.input_begin + j);
+        }
+      }
+    }
+    segment.inputs_end = static_cast<std::uint32_t>(island_inputs_.size());
+    segments_.push_back(segment);
+  }
 }
 
 void Graph::process_block() noexcept {
-  for (std::size_t i = 0; i < def_.nodes.size(); ++i) {
-    const GraphDef::Node& node = def_.nodes[i];
-    node.kernel->process(
-        state_ptrs_[i], input_ptrs_.data() + node.input_begin,
-        def_.op_data.data() + node.op_begin, values_.data() + node.value_begin,
-        buffers_.data() + i * BlockSize, static_cast<std::uint32_t>(BlockSize));
+  for (const Segment& seg : segments_) {
+    if (seg.island == 0) {
+      for (std::uint32_t k = seg.begin; k < seg.end; ++k) {
+        const Op& op = ops_[k];
+        op.process(op.state, op.ins, op.op_bytes, op.values, op.out,
+                   static_cast<std::uint32_t>(BlockSize));
+      }
+      continue;
+    }
+    for (std::uint32_t i = 0; i < BlockSize; ++i) {
+      for (std::uint32_t j = seg.inputs_begin; j < seg.inputs_end; ++j) {
+        const std::uint32_t p = island_inputs_[j];
+        island_ptrs_[p] = input_ptrs_[p] + i;
+      }
+      for (std::uint32_t k = seg.begin; k < seg.end; ++k) {
+        const Op& op = ops_[k];
+        op.process(op.state, op.ins, op.op_bytes, op.values, op.out + i, 1);
+      }
+    }
   }
 }
 

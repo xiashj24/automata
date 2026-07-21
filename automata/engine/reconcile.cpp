@@ -5,6 +5,7 @@
 
 #include "automata/engine/diff.hpp"
 #include "automata/engine/graph.hpp"
+#include "automata/graph/schedule.hpp"
 
 namespace automata {
 
@@ -47,9 +48,11 @@ void Reconciler::pump() {
 
   // A pinned def carries code pointers into its own generation: even with
   // an identical hash it must swap so the fresh code lands — the transfer
-  // plan matches every node, so state still carries over.
+  // plan matches every node, so state still carries over. Likewise a value
+  // edit that flips a feedback cycle between block and sample-serial
+  // execution: the schedule is baked into the Graph (ADR 0011).
   if (has_def_ && p.def.def_hash == current_def_.def_hash &&
-      p.owner == nullptr) {
+      p.owner == nullptr && detail::schedule_equivalent(current_def_, p.def)) {
     auto remapped = remap_values(current_def_, p.def);
     auto* table = new float[remapped.size()];
     std::copy(remapped.begin(), remapped.end(), table);
