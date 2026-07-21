@@ -158,21 +158,31 @@ inline Signal operator>=(Signal a, Signal b) {
   return in * std::pow(10.f, db / 20.f);
 }
 
-[[nodiscard]] inline Signal svf_lp(Signal in, Signal cutoff_hz, Signal q) {
+// resonance is normalized 0..1: 0 = critically damped, 1 = self-oscillation.
+[[nodiscard]] inline Signal svf_lp(Signal in,
+                                   Signal cutoff_hz,
+                                   Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate, q)
+      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
+               resonance)
       .output(&Svf::Out::lp);
 }
 
-[[nodiscard]] inline Signal svf_bp(Signal in, Signal cutoff_hz, Signal q) {
+[[nodiscard]] inline Signal svf_bp(Signal in,
+                                   Signal cutoff_hz,
+                                   Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate, q)
+      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
+               resonance)
       .output(&Svf::Out::bp);
 }
 
-[[nodiscard]] inline Signal svf_hp(Signal in, Signal cutoff_hz, Signal q) {
+[[nodiscard]] inline Signal svf_hp(Signal in,
+                                   Signal cutoff_hz,
+                                   Signal resonance) {
   return make_node<Svf>(in)
-      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate, q)
+      .control(&Svf::update_coeffs, cutoff_hz * detail::InvSampleRate,
+               resonance)
       .output(&Svf::Out::hp);
 }
 

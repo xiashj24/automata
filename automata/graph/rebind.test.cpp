@@ -24,7 +24,8 @@ GraphDef full_vocabulary_def() {
     const Signal env =
         ar(metro(2.f), 0.01f, 0.1f) + are(pulsen(0.1f, 0.5f), 0.01f, 0.2f);
     const Signal filtered = svf_lp(osc * env, 800.f, 0.7f) +
-                            svf_bp(osc, 500.f, 2.f) + svf_hp(osc, 100.f, 1.f);
+                            svf_bp(osc, 500.f, 0.75f) +
+                            svf_hp(osc, 100.f, 0.5f);
     const Signal wet = soft_clip(filtered / 2.f) + (-filtered) +
                        fb.read(0.25f) * 0.5f +
                        hard_clip(bipolar(clip(unipolar(osc)))) +

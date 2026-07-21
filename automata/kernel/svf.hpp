@@ -4,7 +4,9 @@
 
 // State-variable filter, topology-preserving transform (Andrew Simper's
 // trapezoidal SVF). One pass yields lp/bp/hp as siblings; the node's output
-// selector picks one (ADR 0005).
+// selector picks one (ADR 0005). Resonance is normalized: 0 is critically
+// damped, 1 self-oscillation, capped just below so the filter always loses
+// energy.
 
 namespace automata {
 
@@ -14,14 +16,18 @@ public:
     float lp, bp, hp;
   };
 
-  void update_coeffs(float cutoff_cycles_per_sample, float q) {
+  void update_coeffs(float cutoff_cycles_per_sample, float resonance) {
     constexpr float Pi = 3.14159265358979323846f;
     constexpr float MaxCutoff = 0.49f;  // keep tan() finite below Nyquist
+    constexpr float MaxResonance = 0.999f;
     const float w = cutoff_cycles_per_sample < MaxCutoff
                         ? cutoff_cycles_per_sample
                         : MaxCutoff;
     g_ = std::tan(Pi * (w > 0.f ? w : 0.f));
-    k_ = 1.f / (q > 0.01f ? q : 0.01f);
+    const float r = resonance < 0.f
+                        ? 0.f
+                        : (resonance > MaxResonance ? MaxResonance : resonance);
+    k_ = 2.f - 2.f * r;
     a1_ = 1.f / (1.f + g_ * (g_ + k_));
     a2_ = g_ * a1_;
     a3_ = g_ * a2_;
