@@ -143,6 +143,51 @@ TEST_CASE("euclid fires single-sample triggers on the euclidean grid",
   }
 }
 
+TEST_CASE("step advances on each trigger, playing step 0 first",
+          "[engine][clock]") {
+  GraphDef def = describe([](GraphBuilder& g) {
+    const Signal s = step((beat() >> 0.5f).trig(), {1.f, 2.f, 3.f});
+    g.out(s, s);
+  });
+
+  // Triggers land on the offbeats (12000, 36000, 60000, 84000 ± a sample);
+  // the first trigger plays step 0, so nothing is skipped, and the value
+  // holds between edges.
+  const std::vector<float> out = left_of(std::move(def), 96256);
+  REQUIRE(out[0] == 1.f);      // holds the first step before any trigger
+  REQUIRE(out[12010] == 1.f);  // the first trigger stays on step 0
+  REQUIRE(out[36010] == 2.f);
+  REQUIRE(out[60010] == 3.f);
+  REQUIRE(out[84010] == 1.f);  // wraps
+}
+
+TEST_CASE("editing a step value is a value patch; resizing is structural",
+          "[engine][clock]") {
+  const auto with_steps = [](std::initializer_list<float> steps) {
+    return describe([&](GraphBuilder& g) {
+      const Signal s = step(beat().trig(), steps);
+      g.out(s, s);
+    });
+  };
+  REQUIRE(with_steps({1.f, 2.f, 3.f}).def_hash ==
+          with_steps({1.f, 9.f, 3.f}).def_hash);
+  REQUIRE(with_steps({1.f, 2.f, 3.f}).def_hash !=
+          with_steps({1.f, 2.f}).def_hash);
+}
+
+TEST_CASE("latch quantizes its input to the trigger grid", "[engine][clock]") {
+  GraphDef def = describe([](GraphBuilder& g) {
+    const Signal s = latch(beat().ramp(), (beat() >> 0.5f).trig());
+    g.out(s, s);
+  });
+
+  // Each offbeat trigger captures the beat ramp at 0.5 and holds it.
+  const std::vector<float> out = left_of(std::move(def), 24256);
+  REQUIRE(out[0] == 0.f);
+  REQUIRE(out[12010] == Approx(0.5f).margin(1e-3));
+  REQUIRE(out[24100] == Approx(0.5f).margin(1e-3));
+}
+
 TEST_CASE("swing delays every second onset", "[engine][clock]") {
   GraphDef def = describe([](GraphBuilder& g) {
     const Signal s = beat().swing(0.5f).trig();

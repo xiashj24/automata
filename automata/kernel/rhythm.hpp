@@ -1,8 +1,9 @@
 #pragma once
 
-// Rhythm kernels (ADR 0008): triggers are wrap events of a phase ramp;
-// swing is a stateless warp of a two-cycle "pair" phase. Both consume any
-// ramp — transport cycles and free-running phasors alike.
+// Rhythm kernels (ADR 0008): triggers are wrap events of a phase ramp, and
+// stateful consumers fire on a rising edge through zero — so gates and
+// single-sample impulses both drive them. Any ramp works: transport cycles
+// and free-running phasors alike.
 
 namespace automata {
 
@@ -24,19 +25,23 @@ private:
   float prev_ = 1.f;
 };
 
-// Warps a pair phase (one ramp covering two cycles) into two sub-cycle
-// ramps whose boundary sits at 0.5 + amount/2: the first stretches, the
-// second compresses, and everything derived downstream lands swung.
-class SwingShaper {
+// Sample-and-hold: captures the input at each rising edge of trig and
+// holds it until the next.
+class Latch {
 public:
-  [[nodiscard]] float process(float phase, float amount) {
-    constexpr float Max = 0.9f;
-    const float a = amount < -Max ? -Max : (amount > Max ? Max : amount);
-    const float split = 0.5f + 0.5f * a;
-    return phase < split ? phase / split : (phase - split) / (1.f - split);
+  [[nodiscard]] float process(float in, float trig) {
+    if (prev_ <= 0.f && trig > 0.f) {
+      held_ = in;
+    }
+    prev_ = trig;
+    return held_;
   }
 
-  void reset() {}
+  void reset() { *this = Latch{}; }
+
+private:
+  float prev_ = 0.f;
+  float held_ = 0.f;
 };
 
 }  // namespace automata

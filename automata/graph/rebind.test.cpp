@@ -18,18 +18,23 @@ namespace {
 GraphDef full_vocabulary_def() {
   return describe([](GraphBuilder& g) {
     auto fb = g.tap("fb");
-    const Signal osc =
-        sine(440.f) + saw(110.f) - phasor(1.f) + sine(220.f, 0.25f);
-    const Signal env = ar(metro(2.f), 0.01f, 0.1f);
+    const Signal osc = sine(440.f) + saw(110.f) - phasor(1.f) +
+                       sine(220.f, 0.25f) + triangle(220.f) + tri(phasor(2.f)) +
+                       simple_fm(110.f, 2.f);
+    const Signal env =
+        ar(metro(2.f), 0.01f, 0.1f) + are(pulsen(0.1f, 0.5f), 0.01f, 0.2f);
     const Signal filtered = svf_lp(osc * env, 800.f, 0.7f) +
                             svf_bp(osc, 500.f, 2.f) + svf_hp(osc, 100.f, 1.f);
-    const Signal wet =
-        soft_clip(filtered / 2.f) + (-filtered) + fb.read(0.25f) * 0.5f;
+    const Signal wet = soft_clip(filtered / 2.f) + (-filtered) +
+                       fb.read(0.25f) * 0.5f +
+                       hard_clip(bipolar(clip(unipolar(osc)))) +
+                       curve(smooth(gain(osc, -6.f)), 2.f) + (osc >= 0.5f);
     fb.write(wet);
     const Clock c = beat();
-    const Signal rhythm = (c / 2).swing(0.25f).trig() + c.gate(0.3f) +
-                          (c >> 0.5f).ramp() + seq(c, {1.f, 2.f}) +
-                          euclid(bar(), 3.f, 8.f, 1.f) + frac(osc);
+    const Signal rhythm =
+        (c / 2).swing(0.25f).trig() + c.gate(0.3f) + (c >> 0.5f).ramp() +
+        seq(c, {1.f, 2.f}) + euclid(bar(), 3.f, 8.f, 1.f) + frac(osc) +
+        step(c.trig(), {1.f, 2.f, 3.f}) + latch(osc, c.trig());
     const Signal controlled =
         wet * param("gain", 0.5f) + mouse_x() + rhythm * 0.1f;
     g.out(controlled, controlled);

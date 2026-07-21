@@ -5,9 +5,12 @@
 
 #include <type_traits>
 
+#include <cmath>
+
 using Catch::Approx;
 
 static_assert(std::is_trivially_copyable_v<automata::Ar>);
+static_assert(std::is_trivially_copyable_v<automata::Are>);
 
 TEST_CASE("ar stays idle without a trigger", "[kernel][envelopes]") {
   automata::Ar env;
@@ -64,4 +67,26 @@ TEST_CASE("ar retriggers mid-release on a new rising edge",
     peak = std::max(peak, env.process(0.f));
   }
   REQUIRE(peak == 1.f);
+}
+
+TEST_CASE("are chases the gate exponentially, within 60 dB after t60",
+          "[kernel][envelopes]") {
+  automata::Are env;
+  env.set_attack(100.f);
+  env.set_release(200.f);
+
+  float value = 0.f;
+  for (int i = 0; i < 100; ++i) {
+    const float next = env.process(1.f);
+    REQUIRE(next > value);
+    value = next;
+  }
+  REQUIRE(value == Approx(1.f).margin(2e-3));  // 60 dB from the target
+
+  for (int i = 0; i < 200; ++i) {
+    const float next = env.process(0.f);
+    REQUIRE(next < value);
+    value = next;
+  }
+  REQUIRE(value == Approx(0.f).margin(2e-3));
 }

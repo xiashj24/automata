@@ -41,4 +41,10 @@ public:
   void reset() {}
 };
 
+class GreaterEqual {
+public:
+  [[nodiscard]] float process(float a, float b) { return a >= b ? 1.f : 0.f; }
+  void reset() {}
+};
+
 }  // namespace automata

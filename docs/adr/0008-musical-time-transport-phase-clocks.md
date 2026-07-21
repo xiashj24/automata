@@ -121,8 +121,10 @@ weighs and partly replaces.
 - (−) A derived step index cannot express "advance on each trigger" — a
   melody stepping on euclid hits, or on audio-derived pulses. The companion
   is an ordinary trigger-counting kernel (the first attempt's `Seq` is the
-  shape, stale-index guard and all); planned vocabulary, not an engine
-  change.
+  shape); landed as `step(trig, values)`: the index rides state transfer,
+  the first trigger plays step 0, the count folds into identity — so a
+  length edit is structural and restarts the melody, which also retires the
+  first attempt's stale-index guard.
 - (−) A `beats` value patch re-derives phase against the new cycle length
   immediately — correct grid, but the phase value itself jumps; downstream
   trig can fire an extra pulse at the moment of the edit.

@@ -4,10 +4,9 @@
 
 // Oscillator kernels (ADR 0005): self-contained, trivially copyable, no
 // engine types. Frequencies are normalized (cycles per sample); factories do
-// the Hz conversion. Waveforms are stateless phase shapers composed over
-// Phasor, so the phase accumulator lives in one kernel and a waveform edit
-// preserves it (ADR 0005). Naive shapes for now — band-limiting is
-// vocabulary work, not machinery work.
+// the Hz conversion. Waveforms are stateless phase shapers (shapers.hpp)
+// composed over Phasor, so the phase accumulator lives in one kernel and a
+// waveform edit preserves it.
 
 namespace automata {
 
@@ -27,23 +26,6 @@ public:
 private:
   float p_ = 0.f;
   float w_ = 0.f;
-};
-
-class SineShaper {
-public:
-  [[nodiscard]] float process(float phase) { return std::sin(TwoPi * phase); }
-
-  void reset() {}
-
-private:
-  static constexpr float TwoPi = 6.28318530717958647692f;
-};
-
-class SawShaper {
-public:
-  [[nodiscard]] float process(float phase) { return 2.f * phase - 1.f; }
-
-  void reset() {}
 };
 
 // Single-sample impulse train; fires on its first sample so a downstream
