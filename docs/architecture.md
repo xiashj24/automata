@@ -69,11 +69,11 @@ of the live-coding loop for no property gained.
 
 | Layer            | Contents                                                        | May depend on        |
 | ---------------- | --------------------------------------------------------------- | -------------------- |
-| `automata/core`  | assert, hash, `RingBuffer`, `LockfreeQueue`, `ControlBus`       | nothing              |
+| `automata/core`  | assert, hash, `RingBuffer`, `LockfreeQueue`, `ControlBus`, `Transport` | nothing        |
 | `automata/kernel`| pure DSP kernels (phasor, svf, delayline, envelopes, …)         | nothing              |
 | `automata/graph` | `Signal`, `GraphBuilder`, `GraphDef`, structural hashing        | core                 |
 | `automata/ugens` | UGen vocabulary: thin factories binding kernels into the graph  | graph, kernel        |
-| `automata/engine`| `Graph`, reconciliation, `Engine`, `Transport`, OSC decode      | core, graph          |
+| `automata/engine`| `Graph`, reconciliation, `Engine`, OSC decode                   | core, graph          |
 | `host/`          | live host: audio device, DLL generations, OSC, mouse            | engine, ugens, deps  |
 | `tools/`         | offline renderer CLI                                            | engine, ugens        |
 | patches          | user code; includes `automata/patch.hpp` (graph + ugens only)   | graph, ugens         |
@@ -168,7 +168,7 @@ drain the inbox, advance the schedule, push retirements to the outbox. The
 — never wall clock — which is what makes offline rendering land on the exact
 same beats. Pending swaps are gated Immediate / NextBeat / NextBar and land
 at the first block boundary past the musical boundary. Musical time reaches
-the graph through `clock(beats)` leaves that re-derive a phase ramp from the
+the graph through `cycle(beats)` leaves that re-derive a phase ramp from the
 transport's beat position every block — position is computed, never
 accumulated, so rhythmic units stay on the grid across swaps and tempo
 changes (ADR 0008).

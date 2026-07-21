@@ -16,12 +16,16 @@
 namespace automata {
 
 class ControlBus;
+struct Transport;
 
 class Graph {
 public:
   // With a bus, param nodes bind their slots at construction; without one
-  // (offline, tests) they play their fallbacks.
-  explicit Graph(GraphDef def, ControlBus* bus = nullptr);
+  // (tests) they play their fallbacks. With a transport, cycle nodes derive
+  // their phase from it; without one they emit 0.
+  explicit Graph(GraphDef def,
+                 ControlBus* bus = nullptr,
+                 const Transport* transport = nullptr);
 
   void process_block() noexcept;
 

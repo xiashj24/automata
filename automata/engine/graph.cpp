@@ -5,13 +5,15 @@
 
 #include "automata/core/assert.hpp"
 #include "automata/core/control_bus.hpp"
+#include "automata/core/transport.hpp"
+#include "automata/graph/clock.hpp"
 #include "automata/graph/kernel_info.hpp"
 #include "automata/graph/param.hpp"
 #include "automata/graph/tap.hpp"
 
 namespace automata {
 
-Graph::Graph(GraphDef def, ControlBus* bus)
+Graph::Graph(GraphDef def, ControlBus* bus, const Transport* transport)
     : def_(std::move(def)), values_(def_.values) {
   const std::size_t count = def_.nodes.size();
   atm_assert(count > 0);
@@ -58,6 +60,17 @@ Graph::Graph(GraphDef def, ControlBus* bus)
         continue;
       auto& s = *reinterpret_cast<detail::ParamState*>(state_ptrs_[i]);
       s.slot = bus->channel(param_name(def_, def_.nodes[i]));
+    }
+  }
+
+  // Cycles bind the transport they re-derive phase from; unbound they
+  // emit 0.
+  if (transport != nullptr) {
+    for (std::size_t i = 0; i < count; ++i) {
+      if (def_.nodes[i].kernel != &detail::ClockInfo)
+        continue;
+      auto& s = *reinterpret_cast<detail::ClockState*>(state_ptrs_[i]);
+      s.transport = transport;
     }
   }
 

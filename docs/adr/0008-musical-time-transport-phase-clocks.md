@@ -49,7 +49,10 @@ weighs and partly replaces.
   swap boundaries from `beat_pos`, fixing the constant-bpm assumption.
   Double accumulation keeps sub-sample beat precision for days and is
   deterministic offline (same arithmetic, same sample count).
-- **Musical time enters the graph through one leaf: `clock(beats)`.** A
+- **Musical time enters the graph through one leaf: `cycle(beats)`.**
+  (Named `cycle`, not `clock` — C's `::clock()` is visible in patches
+  through their file-scope using-directive and would make bare calls
+  ambiguous.) A
   data-kernel node like `param` (ADR 0007), bound to a `const Transport*`
   at Graph build. Each block it re-derives phase from absolute position —
   `fract(beat_pos / beats)` advanced per sample at the current tempo, all
@@ -89,7 +92,7 @@ weighs and partly replaces.
   no pattern buffer to rebuild on a parameter change, real-time safe by
   construction.
 - **The patch surface is a `Clock` wrapper, kept from the first attempt.**
-  `clock(beats)` / `beat()` / `bar()` return a describe-time wrapper over
+  `cycle(beats)` / `beat()` / `bar()` return a describe-time wrapper over
   the phase Signal that remembers its cycle length in beats. Rate algebra
   rebuilds clocks on the transport grid — `c / 2`, `c * 4` are new `clock`
   nodes, alignment-exact and patchable, not wrap counters — `c >> k`
@@ -106,7 +109,7 @@ weighs and partly replaces.
 - (+) Every rhythmic unit is on the grid after any edit: swap, tempo
   change, or crossfade — position re-derives from the transport instead of
   surviving in per-node counters.
-- (+) `beat()`/`bar()` from ADR 0004 become sugar over `clock`.
+- (+) `beat()`/`bar()` from ADR 0004 become sugar over `cycle`.
 - (+) Kernels stay engine-free: only the `clock` leaf touches the
   transport, the same boundary `param` draws around the ControlBus.
 - (−) Phase is a float32 signal: a cycle's per-sample increment falls

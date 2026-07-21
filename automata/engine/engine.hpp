@@ -9,7 +9,7 @@
 #include "automata/core/hash.hpp"
 #include "automata/core/lockfree_queue.hpp"
 #include "automata/engine/diff.hpp"
-#include "automata/engine/transport.hpp"
+#include "automata/core/transport.hpp"
 
 // The audio-thread half of the system (ADR 0003): render drains the inbox,
 // runs at most two graphs (current + fading) under a linear crossfade, and

@@ -19,13 +19,20 @@ namespace automata {
   registry.add_data_kernel(&detail::TapWriteInfo);
   registry.add_data_kernel(&detail::TapReadInfo);
   registry.add_data_kernel(&detail::ParamInfo);
+  registry.add_data_kernel(&detail::ClockInfo);
+  registry.add_data_kernel(&detail::SeqInfo);
+  registry.add_data_kernel(&detail::EuclidInfo);
 
   const GraphDef probe = describe([](GraphBuilder& g) {
     const Signal osc = sine(440.f) + saw(110.f) - phasor(1.f);
     const Signal env = ar(metro(2.f), 0.01f, 0.1f);
     const Signal filtered = svf_lp(osc * env, 800.f, 0.7f);
     const Signal shaped = soft_clip(filtered / 2.f) + (-filtered);
-    g.out(shaped, shaped);
+    const Clock c = beat();
+    const Signal rhythm = (c / 2).swing(0.25f).trig() + c.gate(0.25f) +
+                          (c >> 0.5f).ramp() + seq(c, {1.f, 2.f}) +
+                          euclid(bar(), 3.f, 8.f);
+    g.out(shaped + rhythm * 0.f, shaped);
   });
   registry.add_probe(probe);
   return registry;
