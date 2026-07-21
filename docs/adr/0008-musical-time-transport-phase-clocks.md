@@ -32,6 +32,14 @@ SC `Stepper`) or by consuming a position directly (Csound `timedseq`).
 Only signalflow ships Euclidean rhythms (recursive Bjorklund, recomputed
 on parameter change).
 
+The first automata attempt (in the xlib repo) had already converged on the
+same core: a `double` beat position advanced per block, with stateless
+beat/bar nodes re-deriving phase from block-start position. It reached the
+transport through a mutable global injected into each DLL, divided clocks
+with a wrap-counting node whose divisor could not be patched, and stepped
+sequences on trigger edges with a stored index — the details this ADR
+weighs and partly replaces.
+
 ## Decision
 
 - **The transport carries continuous beat position.** `Transport` gains
@@ -60,21 +68,26 @@ on parameter change).
   content rides ordinary inputs (Consts lift from literals), so editing a
   step is a value patch with the standard glide.
 - **Triggers are derived from phase by wrap detection.** The currency is a
-  single-sample impulse (1.0); `trig(phase)` emits one when the ramp steps
-  down (the Faust `pulse` idiom, one previous-sample float of state).
-  Stateful consumers fire on a rising edge through zero, so gates work as
-  triggers. A trigger-domain divider (SC `PulseDivider`) stays possible as
-  an ordinary kernel for non-transport pulse streams, but nothing in the
-  brief needs it.
+  single-sample impulse (1.0); `trig(phase)` fires when the ramp drops by
+  more than half a cycle — a threshold, not `<`, so warped ramps can't
+  false-trigger — keeping one previous-sample float initialized to 1 so a
+  fresh trig fires the downbeat at cycle start while state transfer keeps a
+  hot-swap from re-firing it (both proven by the first attempt's
+  `ClockTrig`). Stateful consumers fire on a rising edge through zero, so
+  gates work as triggers — and gates fall out of comparison
+  (`phase < width`), stateless. `trig` accepts any ramp: a free-running
+  metro is `trig(phasor(f))`, no transport involved.
 - **Swing is a stateless phase warp.** `swing(phase, amount)` piecewise-
   linearly stretches the first half of the cycle and compresses the second;
   everything downstream — trig, seq, euclid — lands swung with no unit
   aware of it. Chosen over Csound's dual-phasor because it composes: one
   warp swings an entire derived chain.
 - **Euclid is arithmetic, not Bjorklund recursion.** Hit at step `i` iff
-  `floor((i+1)·k/n) − floor(i·k/n) ≥ 1` — rotation-equivalent to the
-  Bjorklund necklaces, O(1) per sample, no pattern buffer to rebuild on a
-  parameter change, real-time safe by construction.
+  `((k·(i+r)) mod n) + k ≥ n` — sndkit's closed form, carried over from the
+  first attempt; algebraically the floor-difference construction and
+  rotation-equivalent to the Bjorklund necklaces. Integer-only per query,
+  no pattern buffer to rebuild on a parameter change, real-time safe by
+  construction.
 
 ## Consequences
 
@@ -90,9 +103,11 @@ on parameter change).
 - (−) No absolute beat/bar *number* reaches the graph (a monotonic count
   would exhaust float32 in hours). Anything needing "bar 17" waits for a
   future decision.
-- (−) Sequences driven by non-transport events (audio-derived pulses)
-  can't use the phase interface; a trigger-stepping kernel can be added as
-  ordinary vocabulary if the need appears.
+- (−) A derived step index cannot express "advance on each trigger" — a
+  melody stepping on euclid hits, or on audio-derived pulses. The companion
+  is an ordinary trigger-counting kernel (the first attempt's `Seq` is the
+  shape, stale-index guard and all); planned vocabulary, not an engine
+  change.
 - (−) A `beats` value patch re-derives phase against the new cycle length
   immediately — correct grid, but the phase value itself jumps; downstream
   trig can fire an extra pulse at the moment of the edit.
