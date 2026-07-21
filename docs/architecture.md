@@ -167,7 +167,11 @@ drain the inbox, advance the schedule, push retirements to the outbox. The
 `Transport` (bpm, beats-per-bar, beat position) advances by samples rendered
 — never wall clock — which is what makes offline rendering land on the exact
 same beats. Pending swaps are gated Immediate / NextBeat / NextBar and land
-at the first block boundary past the musical boundary.
+at the first block boundary past the musical boundary. Musical time reaches
+the graph through `clock(beats)` leaves that re-derive a phase ramp from the
+transport's beat position every block — position is computed, never
+accumulated, so rhythmic units stay on the grid across swaps and tempo
+changes (ADR 0008).
 
 ## Threads and real-time discipline (ADR 0003)
 
