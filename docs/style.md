@@ -39,8 +39,9 @@ an ADR governs a topic, the ADR wins.
 - No singletons: the caller constructs and owns engine objects. The one
   sanctioned exception is the scoped active-graph context during patch
   describe (ADR 0005).
-- User-defined literals for physical quantities (`_hz`, `_ms`, `_db`) as
-  the corresponding types land.
+- Unit literals for physical quantities (`_hz`, `_bpm`, `_s`, `_ms`,
+  `_db`) live in core/units.hpp — annotated floats; `_ms` converts to
+  seconds, the rest pass through.
 
 ## Modern C++ usage
 

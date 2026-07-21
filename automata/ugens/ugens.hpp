@@ -5,6 +5,7 @@
 #include <initializer_list>
 
 #include "automata/config.hpp"
+#include "automata/core/units.hpp"
 #include "automata/graph/clock.hpp"
 #include "automata/graph/fn.hpp"
 #include "automata/graph/make_node.hpp"
