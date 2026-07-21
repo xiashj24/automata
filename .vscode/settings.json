@@ -1,14 +1,13 @@
 {
   "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
   "C_Cpp.default.cppStandard": "c++23",
-  "C_Cpp.default.intelliSenseMode": "windows-clang-x64",
   "emeraldwalk.runonsave": {
     "commands": [
       {
         // Saving patches/<name>.cpp rebuilds the <name> patch target; the
         // running host picks up the fresh DLL on its next poll.
         "match": "patches[\\\\/].*\\.cpp$",
-        "cmd": "cmake --build \"${workspaceFolder}\\build\" --target ${fileBasenameNoExt}",
+        "cmd": "cmake --build \"${workspaceFolder}/build\" --target ${fileBasenameNoExt}",
         "message": "building patch ${fileBasenameNoExt}…",
         "showElapsed": true,
         "autoShowOutputPanel": "error"
